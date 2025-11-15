@@ -1,5 +1,5 @@
 // src/pages/user/Login.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +8,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  // kalau sudah login, langsung arahkan ke home
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/"); // atau "/activity"
+    }
+  }, [navigate]);
+
   const submit = async (e) => {
     e.preventDefault();
     if (!email.includes("@")) return alert("Email tidak valid");
@@ -15,10 +23,22 @@ export default function Login() {
 
     try {
       const res = await api.post("/login", { email, password });
-      localStorage.setItem("token", res.data.token);
+
+      const token = res.data.token;
+      // coba ambil data user dari response, kalau tidak ada pakai fallback
+      const user = res.data.user ||
+        res.data.data?.user || {
+          email,
+          name: "Guest User",
+        };
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("userProfile", JSON.stringify(user));
+
       alert("Login berhasil");
       navigate("/");
     } catch (err) {
+      console.error("Login error:", err.response?.data || err.message);
       alert("Login gagal. Periksa email/password.");
     }
   };

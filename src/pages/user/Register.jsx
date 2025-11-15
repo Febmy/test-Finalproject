@@ -2,6 +2,7 @@
 import { useState } from "react";
 import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -36,7 +37,12 @@ export default function Register() {
       );
     }
   };
-
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/"); // atau "/activity"
+    }
+  }, [navigate]);
   return (
     <div className="max-w-md mx-auto p-6">
       <h1 className="text-xl font-bold mb-4">Register</h1>

@@ -1,12 +1,13 @@
 // src/lib/api.js
 import axios from "axios";
+import { API_KEY, BASE_URL } from "../utils/env";
 
 const api = axios.create({
-  baseURL: "https://travel-journal-api-bootcamp.do.dibimbing.id/api/v1",
+  baseURL: BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
-  config.headers.apiKey = "24405e01-fbc1-45a5-9f5a-be13afcd757c";
+  config.headers.apiKey = API_KEY;
   config.headers["Content-Type"] = "application/json";
 
   const token = localStorage.getItem("token");
