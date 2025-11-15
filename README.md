@@ -1,16 +1,162 @@
-# React + Vite
+# TravelApp – Final Project Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplikasi **TravelApp** adalah final project frontend yang dibangun dengan **React + Vite** dan menggunakan API dari:
 
-Currently, two official plugins are available:
+`https://travel-journal-api-bootcamp.do.dibimbing.id`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Aplikasi ini mensimulasikan platform pemesanan aktivitas wisata: user bisa login, melihat aktivitas, menambahkan ke cart, checkout, melihat riwayat transaksi, meng-cancel transaksi pending, hingga melihat profil dirinya.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ✨ Fitur Utama
 
-## Expanding the ESLint configuration
+### 1. Autentikasi User
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Register** dan **Login** menggunakan endpoint API.
+- Token JWT disimpan (mis. di `localStorage`) dan otomatis dikirim lewat `Authorization: Bearer <token>` pada setiap request.
+- Navbar akan menampilkan:
+  - Nama user (Hi, \<nama\>)
+  - Tombol **Profile**, **Cart**, **My Transactions**, dan **Logout**.
+- Tombol **Logout** akan:
+  - Menghapus token.
+  - Mengarahkan kembali ke halaman login.
+
+### 2. Homepage
+
+- Menampilkan **hero image** / banner utama.
+- Seksi:
+  - _Section I – Semua Aktivitas_
+  - _Section II – Rekomendasi_
+  - _Section III – Transaksi Saya_
+- Card rekomendasi diambil dari endpoint aktivitas (bukan data statis).
+- Terdapat **footer** dengan teks hak cipta dan link Terms & Privacy.
+
+### 3. Halaman Activity List
+
+- Route: `/activity`
+- Menampilkan daftar semua aktivitas dari API.
+- Filter/tab:
+  - **All**, **Budget**, **Premium** (opsional filter berdasarkan harga).
+- Card aktivitas berisi:
+  - Gambar aktivitas (dari API).
+  - Judul, deskripsi singkat, harga.
+- Klik card akan membuka halaman **Activity Detail**.
+
+### 4. Halaman Activity Detail
+
+- Route: `/activity/:id`
+- Menampilkan detail 1 aktivitas:
+  - Gambar, judul, harga, deskripsi lengkap.
+- Section **Booking**:
+  - Input **tanggal** (date).
+  - (Opsional jumlah orang — saat ini logic quantity langsung di cart).
+  - Tombol **Add to Cart**:
+    - Memanggil endpoint **Add Cart**.
+    - Menampilkan toast sukses / error.
+
+### 5. Cart
+
+- Route: `/cart`
+- Menampilkan semua item yang ada di cart user (endpoint `/carts`).
+- Untuk setiap item:
+  - Gambar aktivitas, judul, harga.
+  - Informasi `x1` (jumlah item).
+  - Tombol **Remove** untuk menghapus item (Delete Cart).
+- Di bagian bawah:
+  - Informasi ringkas:  
+    `Ada X aktivitas dengan total Y orang di keranjangmu.`
+  - Total harga: `Total: RpX`.
+  - Tombol:
+    - **Clear** (mengosongkan cart).
+    - **Activity** (kembali ke halaman activity).
+    - **Checkout** (navigasi ke halaman checkout).
+
+### 6. Checkout
+
+- Route: `/checkout`
+- Mengambil:
+  - Data **payment methods** dari endpoint `/payment-methods`.
+  - Data cart (untuk mendapatkan `cartIds`).
+- Form Checkout:
+  - Data dasar (full name, email, phone) – disimpan di state.
+  - Pilihan **metode pembayaran** (radio).
+  - Tombol **Confirm Checkout**:
+    - Validasi form dan payment method.
+    - Memanggil endpoint **Create Transaction** dengan payload:
+      ```json
+      {
+        "cartIds": ["id-cart-1", "id-cart-2"],
+        "paymentMethodId": "id-payment-method"
+      }
+      ```
+    - Jika sukses, redirect ke **My Transactions**.
+- Semua error (network/validasi) akan menampilkan **toast**.
+
+### 7. My Transactions
+
+- Route: `/transactions`
+- Menampilkan riwayat transaksi user dari endpoint `/my-transactions`.
+- Filter/tab:
+  - **All**, **Success**, **Pending**, **Failed**, **Cancelled**.
+- Card transaksi:
+  - Gambar aktivitas.
+  - Judul (Activity).
+  - **Total**: `RpX` dan jika memungkinkan: `Total: RpX • N item`.
+  - Payment method.
+  - Tanggal & waktu transaksi.
+  - Badge status: `success | pending | failed | cancelled`.
+- Tombol **Cancel**:
+  - Hanya muncul untuk transaksi dengan status **pending**.
+  - Memanggil endpoint **Cancel Transaction**.
+  - Jika sukses, status di UI berubah menjadi `cancelled`.
+  - Menampilkan toast sukses/error.
+
+### 8. Profile
+
+- Route: `/profile`
+- Menampilkan informasi user:
+  - Nama, email, dan data lain yang tersedia dari endpoint `/profile`.
+- Layout rapi dan konsisten dengan desain halaman lain.
+
+### 9. Toast Notification
+
+- Menggunakan **Toast component** custom:
+  - Ditampilkan untuk:
+    - Login gagal/berhasil.
+    - Add to cart berhasil/gagal.
+    - Checkout berhasil/gagal.
+    - Update/cancel transaksi.
+  - Posisi di pojok atas (top-right) dengan auto-hide setelah beberapa detik.
+
+### 10. Routing & Proteksi Halaman
+
+- Menggunakan **React Router DOM**:
+  - Public routes: `/login`, `/register`.
+  - Protected routes: `/`, `/activity`, `/activity/:id`, `/cart`, `/checkout`, `/transactions`, `/profile`.
+- ProtectedRoute akan:
+  - Mengecek apakah token JWT ada.
+  - Jika tidak ada, otomatis redirect ke `/login`.
+
+---
+
+## 🧰 Tech Stack
+
+- **React 18**
+- **Vite**
+- **React Router DOM v6**
+- **Axios** (dengan instance custom di `lib/api.js`)
+- **Tailwind CSS** / utility CSS
+- **ESLint + Prettier** (opsional, untuk konsistensi code style)
+
+---
+
+## 🔑 Konfigurasi API
+
+Semua konfigurasi API menggunakan environment variables.
+
+Buat file `.env` di root project:
+
+```bash
+VITE_API_BASE_URL=https://travel-journal-api-bootcamp.do.dibimbing.id
+VITE_API_KEY=24405e01-fbc1-45a5-9f5a-xxxxxx   # ganti dengan API_KEY milikmu
+```
