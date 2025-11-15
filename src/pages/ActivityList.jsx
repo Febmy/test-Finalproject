@@ -1,7 +1,7 @@
 // src/pages/user/ActivityList.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../../lib/api";
+import api from "../lib/api";
 
 export default function ActivityList() {
   const [activities, setActivities] = useState([]);

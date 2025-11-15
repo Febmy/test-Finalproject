@@ -1,11 +1,13 @@
 // src/pages/user/ActivityDetail.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../../lib/api";
+import api from "../lib/api.js";
+import { useToast } from "../context/ToastContext.jsx";
 
 export default function ActivityDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [activity, setActivity] = useState(null);
   const [date, setDate] = useState("");
@@ -24,25 +26,40 @@ export default function ActivityDetail() {
           err.response?.data || err.message
         );
         setError("Gagal memuat detail aktivitas.");
+        showToast({
+          type: "error",
+          message: "Gagal memuat detail aktivitas.",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [id]);
+  }, [id, showToast]);
 
   const handleAddToCart = async () => {
     if (!id) return;
+
     try {
       await api.post("/add-cart", {
         activityId: id,
-        bookingDate: date || null, // boleh kosong
+        bookingDate: date || null,
       });
+
+      showToast({
+        type: "success",
+        message: "Berhasil menambahkan ke keranjang.",
+      });
+
       navigate("/cart");
     } catch (err) {
       console.error("Add to cart error:", err.response?.data || err.message);
-      alert("Gagal menambahkan ke cart");
+      showToast({
+        type: "error",
+        message:
+          err.response?.data?.message || "Gagal menambahkan ke keranjang.",
+      });
     }
   };
 

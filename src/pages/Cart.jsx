@@ -1,15 +1,28 @@
-// src/pages/user/Cart.jsx
+// src/pages/Cart.jsx
 import { useEffect, useState } from "react";
-import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
+import api from "../lib/api";
+import { useToast } from "../context/ToastContext.jsx";
+import EmptyState from "../components/ui/EmptyState.jsx";
+import Spinner from "../components/ui/Spinner.jsx";
+import { formatCurrency } from "../lib/format.js";
 
 export default function Cart() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
-  // ambil data cart dari API
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  // --- Helpers ---
+
+  const getImage = (item) =>
+    item.activity?.imageUrl ||
+    (Array.isArray(item.activity?.imageUrls) && item.activity.imageUrls[0]) ||
+    item.activity?.thumbnail ||
+    "https://images.pexels.com/photos/672532/pexels-photo-672532.jpeg?auto=compress&cs=tinysrgb&w=1200";
+
   const fetchCart = async () => {
     try {
       setLoading(true);
@@ -22,6 +35,10 @@ export default function Cart() {
     } catch (err) {
       console.error("Cart error:", err.response?.data || err.message);
       setError("Gagal memuat keranjang.");
+      showToast({
+        type: "error",
+        message: "Gagal memuat keranjang.",
+      });
     } finally {
       setLoading(false);
     }
@@ -31,13 +48,6 @@ export default function Cart() {
     fetchCart();
   }, []);
 
-  const getImage = (item) =>
-    item.activity?.imageUrl ||
-    (Array.isArray(item.activity?.imageUrls) && item.activity.imageUrls[0]) ||
-    item.activity?.thumbnail ||
-    "https://images.pexels.com/photos/672532/pexels-photo-672532.jpeg?auto=compress&cs=tinysrgb&w=1200";
-
-  // ubah quantity lokal (+/-)
   const changeQty = (id, delta) => {
     setItems((prev) =>
       prev.map((item) =>
@@ -51,27 +61,31 @@ export default function Cart() {
     );
   };
 
-  // hapus 1 item
   const handleRemove = async (id) => {
     const ok = window.confirm("Hapus item ini dari keranjang?");
     if (!ok) return;
 
     try {
       await api.delete(`/delete-cart/${id}`);
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      showToast({
+        type: "success",
+        message: "Item dihapus dari keranjang.",
+      });
     } catch (err) {
       console.error("Delete cart error:", err.response?.data || err.message);
+      showToast({
+        type: "error",
+        message: "Gagal menghapus item dari keranjang.",
+      });
     }
-
-    setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // clear semua item
   const handleClear = async () => {
     const ok = window.confirm("Hapus semua item di keranjang?");
     if (!ok) return;
 
     try {
-      // tidak ada endpoint "clear all", jadi kita hapus satu-satu
       for (const item of items) {
         try {
           await api.delete(`/delete-cart/${item.id}`);
@@ -82,48 +96,64 @@ export default function Cart() {
           );
         }
       }
-    } finally {
       setItems([]);
+      showToast({
+        type: "success",
+        message: "Keranjang berhasil dikosongkan.",
+      });
+    } catch {
+      // error per-item sudah dilog
     }
   };
 
   const handleCheckout = () => {
     if (items.length === 0) {
-      alert("Keranjang masih kosong.");
+      showToast({
+        type: "error",
+        message: "Keranjang masih kosong.",
+      });
       return;
     }
     navigate("/checkout");
   };
 
   const totalQty = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-
   const totalPrice = items.reduce(
     (sum, item) => sum + (item.activity?.price || 0) * (item.quantity || 1),
     0
   );
 
+  // --- UI states ---
+
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
-        <div className="h-8 w-40 bg-slate-200 rounded-full animate-pulse" />
-        <div className="space-y-3 mt-4">
-          <div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
-          <div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
-        </div>
-      </div>
+      <section className="space-y-4">
+        <header className="space-y-1">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Cart</h1>
+          <p className="text-sm text-slate-600">
+            Memuat keranjang perjalananmu...
+          </p>
+        </header>
+        <Spinner />
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <section className="space-y-3">
+        <header className="space-y-1">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Cart</h1>
+        </header>
         <p className="text-sm text-red-600">{error}</p>
-      </div>
+      </section>
     );
   }
 
+  // --- Normal render ---
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <section className="space-y-6">
       {/* HEADER */}
       <header className="space-y-1">
         <h1 className="text-xl md:text-2xl font-bold text-slate-900">Cart</h1>
@@ -136,21 +166,16 @@ export default function Cart() {
 
       {/* CONTENT */}
       {items.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 text-sm text-slate-600">
-          Keranjangmu masih kosong.{" "}
-          <button
-            className="text-slate-900 font-semibold underline"
-            onClick={() => navigate("/activity")}
-          >
-            Lihat aktivitas
-          </button>
-        </div>
+        <EmptyState
+          title="Keranjangmu masih kosong."
+          description="Mulai jelajahi aktivitas dan tambahkan ke keranjang untuk melanjutkan checkout."
+        />
       ) : (
         <>
           {/* LIST ITEM */}
           <section className="space-y-3">
             {items.map((item) => (
-              <div
+              <article
                 key={item.id}
                 className="flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-3 md:p-4 shadow-sm"
               >
@@ -170,7 +195,7 @@ export default function Cart() {
                     {item.activity?.title || "Activity"}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Rp{(item.activity?.price || 0).toLocaleString()} x{" "}
+                    {formatCurrency(item.activity?.price || 0)} x{" "}
                     {item.quantity || 1}
                   </p>
                 </div>
@@ -205,14 +230,17 @@ export default function Cart() {
                     Remove
                   </button>
                 </div>
-              </div>
+              </article>
             ))}
           </section>
 
           {/* SUMMARY + BUTTONS */}
           <section className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 pt-4">
             <p className="text-sm md:text-base text-slate-900 font-semibold">
-              Total: Rp{totalPrice.toLocaleString()}
+              Total:{" "}
+              <span className="font-semibold">
+                {formatCurrency(totalPrice)}
+              </span>
             </p>
 
             <div className="flex gap-2">
@@ -241,6 +269,6 @@ export default function Cart() {
           </section>
         </>
       )}
-    </div>
+    </section>
   );
 }

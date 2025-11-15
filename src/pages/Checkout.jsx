@@ -1,7 +1,8 @@
 // src/pages/user/Checkout.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../lib/api";
+import api from "../lib/api.js";
+import { useToast } from "../context/ToastContext.jsx";
 
 export default function Checkout() {
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -18,6 +19,7 @@ export default function Checkout() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -31,19 +33,31 @@ export default function Checkout() {
         const cartRes = await api.get("/carts");
         const carts = cartRes.data.data || [];
         setCartIds(carts.map((c) => c.id));
+
+        if (carts.length === 0) {
+          setError("Keranjang kosong. Tambahkan aktivitas dulu.");
+          showToast({
+            type: "error",
+            message: "Keranjang kosong. Tambahkan aktivitas dulu.",
+          });
+        }
       } catch (err) {
         console.error(
           "Checkout init error:",
           err.response?.data || err.message
         );
         setError("Gagal memuat data checkout.");
+        showToast({
+          type: "error",
+          message: "Gagal memuat data checkout.",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, []);
+  }, [showToast]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -62,7 +76,10 @@ export default function Checkout() {
     setError("");
 
     if (!isFormValid) {
-      setError("Lengkapi form dan pilih metode pembayaran terlebih dahulu.");
+      const msg =
+        "Lengkapi form, pilih metode pembayaran & pastikan keranjang terisi.";
+      setError(msg);
+      showToast({ type: "error", message: msg });
       return;
     }
 
@@ -73,11 +90,17 @@ export default function Checkout() {
         paymentMethodId: selectedMethod,
       });
 
-      // setelah sukses, arahkan ke My Transactions
+      showToast({
+        type: "success",
+        message: "Checkout berhasil! Transaksi sudah dibuat.",
+      });
+
       navigate("/transactions");
     } catch (err) {
       console.error("Checkout error:", err.response?.data || err.message);
-      setError("Checkout gagal, coba lagi.");
+      const msg = "Checkout gagal, coba lagi.";
+      setError(msg);
+      showToast({ type: "error", message: msg });
     } finally {
       setSubmitting(false);
     }
@@ -225,6 +248,12 @@ export default function Checkout() {
                 <img src={pm.imageUrl} alt={pm.name} />
               </label>
             ))}
+
+            {paymentMethods.length === 0 && (
+              <p className="text-xs text-slate-500">
+                Tidak ada metode pembayaran yang tersedia.
+              </p>
+            )}
           </div>
         </section>
       </div>

@@ -1,7 +1,7 @@
-// src/pages/user/Homepage.jsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../../lib/api";
+import api from "../lib/api.js";
+import { useToast } from "../context/ToastContext.jsx";
 
 export default function Homepage() {
   const [promos, setPromos] = useState([]);
@@ -9,6 +9,7 @@ export default function Homepage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -23,13 +24,15 @@ export default function Homepage() {
         setActivities(aRes.data.data || []);
       } catch (err) {
         console.error("Homepage error:", err.response?.data || err.message);
-        setError("Gagal memuat data homepage.");
+        const msg = "Gagal memuat data homepage.";
+        setError(msg);
+        showToast({ type: "error", message: msg });
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [showToast]);
 
   // SKELETON LOADING
   if (loading) {
@@ -112,19 +115,19 @@ export default function Homepage() {
           onClick={() => navigate("/activity")}
           className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base font-semibold hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
         >
-          Section I – Semua Aktivitas
+          Semua Aktivitas
         </button>
         <button
           onClick={() => navigate("/activity")}
           className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base font-semibold hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
         >
-          Section II – Rekomendasi
+          Rekomendasi
         </button>
         <button
           onClick={() => navigate("/transactions")}
           className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base font-semibold hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
         >
-          Section III – Transaksi Saya
+          Transaksi Saya
         </button>
       </section>
 

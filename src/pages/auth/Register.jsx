@@ -1,8 +1,8 @@
 // src/pages/user/Register.jsx
-import { useState } from "react";
-import api from "../../lib/api";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import api from "../../lib/api.js";
+import { useToast } from "../../context/ToastContext.jsx";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -10,12 +10,26 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user");
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const submit = async (e) => {
     e.preventDefault();
-    if (name.trim().length < 3) return alert("Nama minimal 3 karakter");
-    if (!email.includes("@")) return alert("Email tidak valid");
-    if (password.length < 6) return alert("Password minimal 6 karakter");
+
+    if (name.trim().length < 3) {
+      showToast({ type: "error", message: "Nama minimal 3 karakter." });
+      return;
+    }
+    if (!email.includes("@")) {
+      showToast({ type: "error", message: "Email tidak valid." });
+      return;
+    }
+    if (password.length < 6) {
+      showToast({
+        type: "error",
+        message: "Password minimal 6 karakter.",
+      });
+      return;
+    }
 
     try {
       const res = await api.post("/register", {
@@ -25,24 +39,36 @@ export default function Register() {
         passwordRepeat: password,
         role,
       });
+
       if (res.data.code === "200") {
-        alert("Register berhasil, silakan login.");
+        showToast({
+          type: "success",
+          message: "Register berhasil, silakan login.",
+        });
         navigate("/login");
       } else {
-        alert(`Register gagal: ${res.data.message}`);
+        showToast({
+          type: "error",
+          message: `Register gagal: ${res.data.message}`,
+        });
       }
     } catch (err) {
-      alert(
-        `Register gagal: ${err.response?.data?.message || "Periksa input"}`
-      );
+      showToast({
+        type: "error",
+        message:
+          err.response?.data?.message ||
+          "Register gagal: periksa kembali input kamu.",
+      });
     }
   };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      navigate("/"); // atau "/activity"
+      navigate("/");
     }
   }, [navigate]);
+
   return (
     <div className="max-w-md mx-auto p-6">
       <h1 className="text-xl font-bold mb-4">Register</h1>
@@ -51,7 +77,7 @@ export default function Register() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name"
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 text-sm"
           required
         />
         <input
@@ -59,7 +85,7 @@ export default function Register() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 text-sm"
           required
         />
         <input
@@ -67,18 +93,18 @@ export default function Register() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 text-sm"
           required
         />
         <select
           value={role}
           onChange={(e) => setRole(e.target.value)}
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 text-sm"
         >
           <option value="user">User</option>
           <option value="admin">Admin</option>
         </select>
-        <button className="w-full bg-green-600 text-white py-2 rounded">
+        <button className="w-full bg-green-600 text-white py-2 rounded text-sm hover:bg-green-700 transition">
           Register
         </button>
       </form>

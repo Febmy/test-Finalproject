@@ -1,11 +1,13 @@
 // src/pages/user/Profile.jsx
 import { useEffect, useState } from "react";
-import api from "../../lib/api";
+import api from "../lib/api.js";
+import { useToast } from "../context/ToastContext.jsx";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { showToast } = useToast();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -14,14 +16,16 @@ export default function Profile() {
         setUser(res.data.data);
       } catch (err) {
         console.error("Profile error:", err.response?.data || err.message);
-        setError("Gagal memuat data profil.");
+        const msg = "Gagal memuat data profil.";
+        setError(msg);
+        showToast({ type: "error", message: msg });
       } finally {
         setLoading(false);
       }
     };
 
     loadProfile();
-  }, []);
+  }, [showToast]);
 
   // LOADING
   if (loading) {

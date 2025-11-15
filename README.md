@@ -160,3 +160,74 @@ Buat file `.env` di root project:
 VITE_API_BASE_URL=https://travel-journal-api-bootcamp.do.dibimbing.id
 VITE_API_KEY=24405e01-fbc1-45a5-9f5a-xxxxxx   # ganti dengan API_KEY milikmu
 ```
+
+# Final Project - TravelApp (Front End Web Development)
+
+Final Project ini adalah aplikasi **TravelApp** berbasis React yang menampilkan daftar aktivitas perjalanan, detail aktivitas, fitur cart & checkout, hingga riwayat transaksi pengguna.
+
+Aplikasi ini dibangun dengan fokus pada:
+
+- **Responsiveness** (mobile–first)
+- **Error handling yang jelas** (toast global)
+- **Struktur folder yang rapi & Single Responsibility Principle**
+- **Kerapihan kode dan pemisahan concerns** (API, context, UI components)
+
+---
+
+## 🚀 Tech Stack
+
+- **React + Vite**
+- **React Router DOM** – routing halaman
+- **Axios** – komunikasi ke REST API
+- **Tailwind CSS** (utility-first styling)
+- **Context API** – untuk Toast (global feedback)
+
+---
+
+## 📂 Project Structure
+
+```txt
+src/
+  components/
+    layout/
+      Navbar.jsx        # Navigasi utama (desktop + mobile menu) + logout toast
+      Footer.jsx        # Footer global
+      PageContainer.jsx # Wrapper layout untuk semua halaman
+      ScrollToTop.jsx   # Scroll ke atas setiap ganti route
+
+    activity/
+      ActivityCard.jsx  # Kartu aktivitas di listing
+
+    cart/
+      CartItem.jsx      # Kartu item keranjang (dipakai di Cart)
+
+    ui/
+      EmptyState.jsx    # Komponen state kosong (tidak ada data)
+      Spinner.jsx       # Komponen loading / spinner
+
+  pages/
+    Home.jsx            # Halaman utama (hero + rekomendasi aktivitas)
+    ActivityList.jsx    # Daftar semua aktivitas
+    ActivityDetail.jsx  # Detail 1 aktivitas + add to cart
+    Cart.jsx            # Keranjang + update quantity, clear, dan ke checkout
+    Checkout.jsx        # Halaman konfirmasi pembayaran + create transaction
+    Transactions.jsx    # Halaman My Transactions + filter + cancel
+    Profile.jsx         # Detail profil user (GET /user)
+    Promos.jsx          # Daftar promo dari endpoint /promos
+    NotFound.jsx        # Halaman 404
+
+    auth/
+      Login.jsx         # Login user, simpan token, toast feedback
+      Register.jsx      # Register user baru
+
+  context/
+    ToastContext.jsx    # Global toast (success/error) untuk semua aksi penting
+
+  lib/
+    api.js              # Axios instance (baseURL, interceptor token)
+    format.js           # Helper formatCurrency & formatDateTime
+
+  App.jsx               # Routing + proteksi route (RequireAuth)
+  main.jsx              # Root render, bungkus dengan BrowserRouter + ToastProvider
+  index.css             # Global styles
+```

@@ -1,12 +1,14 @@
 // src/pages/user/Login.jsx
 import { useState, useEffect } from "react";
-import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
+import api from "../../lib/api.js";
+import { useToast } from "../../context/ToastContext.jsx";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // kalau sudah login, langsung arahkan ke home
   useEffect(() => {
@@ -18,14 +20,23 @@ export default function Login() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!email.includes("@")) return alert("Email tidak valid");
-    if (password.length < 6) return alert("Password minimal 6 karakter");
+
+    if (!email.includes("@")) {
+      showToast({ type: "error", message: "Email tidak valid." });
+      return;
+    }
+    if (password.length < 6) {
+      showToast({
+        type: "error",
+        message: "Password minimal 6 karakter.",
+      });
+      return;
+    }
 
     try {
       const res = await api.post("/login", { email, password });
 
       const token = res.data.token;
-      // coba ambil data user dari response, kalau tidak ada pakai fallback
       const user = res.data.user ||
         res.data.data?.user || {
           email,
@@ -35,11 +46,14 @@ export default function Login() {
       localStorage.setItem("token", token);
       localStorage.setItem("userProfile", JSON.stringify(user));
 
-      alert("Login berhasil");
+      showToast({ type: "success", message: "Login berhasil." });
       navigate("/");
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      alert("Login gagal. Periksa email/password.");
+      showToast({
+        type: "error",
+        message: "Login gagal. Periksa email/password.",
+      });
     }
   };
 
@@ -52,7 +66,7 @@ export default function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 text-sm"
           required
         />
         <input
@@ -60,10 +74,10 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="w-full border rounded px-3 py-2"
+          className="w-full border rounded px-3 py-2 text-sm"
           required
         />
-        <button className="w-full bg-blue-600 text-white py-2 rounded">
+        <button className="w-full bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700 transition">
           Login
         </button>
       </form>
