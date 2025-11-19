@@ -17,6 +17,7 @@ import Transactions from "./pages/Transactions.jsx";
 import Profile from "./pages/Profile.jsx";
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
+import Promos from "./pages/Promos.jsx";
 
 // ADMIN PAGES
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="/activity/:id" element={<ActivityDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/promos" element={<Promos />} />
 
             {/* USER PROTECTED */}
             <Route

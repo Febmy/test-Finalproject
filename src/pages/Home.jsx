@@ -1,7 +1,7 @@
+// src/pages/user/Homepage.jsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../lib/api.js";
-import { useToast } from "../context/ToastContext.jsx";
+import api from "../../src/lib/api.js";
 
 export default function Homepage() {
   const [promos, setPromos] = useState([]);
@@ -9,8 +9,8 @@ export default function Homepage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { showToast } = useToast();
 
+  // Ambil data promos & activities dari API
   useEffect(() => {
     const load = async () => {
       try {
@@ -20,19 +20,18 @@ export default function Homepage() {
           api.get("/activities?limit=8"),
         ]);
 
-        setPromos(pRes.data.data || []);
-        setActivities(aRes.data.data || []);
+        setPromos(pRes.data?.data || []);
+        setActivities(aRes.data?.data || []);
       } catch (err) {
         console.error("Homepage error:", err.response?.data || err.message);
-        const msg = "Gagal memuat data homepage.";
-        setError(msg);
-        showToast({ type: "error", message: msg });
+        setError("Gagal memuat data homepage.");
       } finally {
         setLoading(false);
       }
     };
+
     load();
-  }, [showToast]);
+  }, []);
 
   // SKELETON LOADING
   if (loading) {
@@ -44,7 +43,8 @@ export default function Homepage() {
           <div className="h-10 rounded-2xl bg-slate-200 animate-pulse" />
           <div className="h-10 rounded-2xl bg-slate-200 animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="h-32 rounded-2xl bg-slate-200 animate-pulse" />
           <div className="h-32 rounded-2xl bg-slate-200 animate-pulse" />
           <div className="h-32 rounded-2xl bg-slate-200 animate-pulse" />
           <div className="h-32 rounded-2xl bg-slate-200 animate-pulse" />
@@ -62,106 +62,182 @@ export default function Homepage() {
     );
   }
 
-  // ====== DATA DARI API ======
+  // ====== DATA PROMO UTAMA ======
   const heroPromo = promos[0];
 
-  // gambar hero: ambil dari API, kalau kosong pakai fallback unsplash
+  const formatCurrency = (value) => {
+    if (value == null) return "-";
+    const num = Number(value);
+    if (Number.isNaN(num)) return "-";
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(num);
+  };
+
+  const heroPromoCode = heroPromo?.promo_code;
+  const heroMinPrice = heroPromo?.minimum_claim_price;
+  const heroDiscount = heroPromo?.promo_discount_price;
+
   const heroImage =
     heroPromo?.imageUrl ||
     (Array.isArray(heroPromo?.imageUrls) && heroPromo.imageUrls[0]) ||
     "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
-  // 3 aktivitas pertama sebagai rekomendasi
-  const recommendedActivities = activities.slice(0, 3);
-
-  // helper gambar aktivitas
-  const getActivityImage = (act) =>
-    act?.imageUrl ||
-    (Array.isArray(act?.imageUrls) && act.imageUrls[0]) ||
-    act?.thumbnail ||
-    "https://images.pexels.com/photos/672532/pexels-photo-672532.jpeg?auto=compress&cs=tinysrgb&w=1200";
+  // Ambil beberapa aktivitas untuk ditampilkan
+  const topActivities = activities.slice(0, 8);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
       {/* ===== HERO PROMO DARI API ===== */}
-      <section className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-lg transition grid md:grid-cols-[2fr,1.2fr] gap-6">
+      <section className="bg-white border border-slate-200 rounded-3xl p-4 md:p-6 shadow-sm hover:shadow-lg transition grid md:grid-cols-[2fr,1.2fr] gap-6">
+        {/* KIRI: teks promo */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             Promo
           </p>
           <h1 className="mt-2 text-2xl md:text-3xl font-bold text-slate-900">
-            {heroPromo?.title || "Staycation Brings Silaturahmi 🙏"}
+            {heroPromo?.title ||
+              heroPromo?.name ||
+              "Staycation Brings Silaturahmi 🙏"}
           </h1>
           <p className="mt-3 text-sm md:text-base text-slate-600 max-w-xl">
             {heroPromo?.description ||
-              "Friendly reminder, family staycation shall be forever memorable. Nikmati diskon menarik untuk berbagai destinasi liburan."}
+              "Friendly reminder, family staycation shall be affordable. Nikmati diskon menarik untuk berbagai destinasi liburan."}
           </p>
+
+          {/* KODE PROMO */}
+          {heroPromoCode && (
+            <p className="mt-3 inline-flex items-center gap-2 text-xs md:text-sm text-slate-700">
+              Kode Promo:
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-900 text-white font-mono text-[11px] tracking-wide">
+                {heroPromoCode}
+              </span>
+            </p>
+          )}
+
+          {/* INFO MIN & DISKON */}
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] md:text-xs text-slate-700">
+            {heroMinPrice != null && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100">
+                Min. transaksi {formatCurrency(heroMinPrice)}
+              </span>
+            )}
+            {heroDiscount != null && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                Diskon {formatCurrency(heroDiscount)}
+              </span>
+            )}
+          </div>
+
+          {/* CTA */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/activity")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-xs md:text-sm hover:bg-slate-800"
+            >
+              Lihat aktivitas
+              <span aria-hidden="true">↗</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/promos")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-300 text-slate-700 text-xs md:text-sm hover:bg-slate-50"
+            >
+              Lihat semua promo
+            </button>
+          </div>
         </div>
 
-        {/* GAMBAR HERO */}
+        {/* KANAN: gambar */}
         <div className="rounded-3xl overflow-hidden bg-slate-100">
           <img
             src={heroImage}
-            alt={heroPromo?.title || "Promo TravelApp"}
+            alt={heroPromo?.title || heroPromo?.name || "Promo TravelApp"}
             className="w-full h-full object-cover"
             loading="lazy"
           />
         </div>
       </section>
 
-      {/* ===== SECTION I–III ===== */}
+      {/* ===== SECTION I–III (CTA) ===== */}
       <section className="space-y-3">
         <button
           onClick={() => navigate("/activity")}
-          className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base font-semibold hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
+          className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base flex items-center justify-between hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
         >
-          Semua Aktivitas
+          <span>Section I – Semua Aktivitas</span>
+          <span className="text-xs text-slate-500">Lihat &rsaquo;</span>
         </button>
         <button
           onClick={() => navigate("/activity")}
-          className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base font-semibold hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
+          className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base flex items-center justify-between hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
         >
-          Rekomendasi
+          <span>Section II – Rekomendasi</span>
+          <span className="text-xs text-slate-500">Lihat &rsaquo;</span>
         </button>
         <button
-          onClick={() => navigate("/transactions")}
-          className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base font-semibold hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
+          onClick={() => navigate("/promos")}
+          className="w-full rounded-2xl bg-white border border-slate-200 px-4 py-3 text-left text-sm md:text-base flex items-center justify-between hover:shadow-sm hover:-translate-y-0.5 transition duration-200"
         >
-          Transaksi Saya
+          <span>Section III – Promo Terbaru</span>
+          <span className="text-xs text-slate-500">Lihat &rsaquo;</span>
         </button>
       </section>
 
-      {/* ===== REKOMENDASI DARI API ===== */}
+      {/* ===== LIST AKTIVITAS ===== */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">
-          Rekomendasi untukmu
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {recommendedActivities.map((act) => (
-            <Link
-              key={act.id}
-              to={`/activity/${act.id}`}
-              className="rounded-2xl bg-white border border-slate-200 overflow-hidden hover:shadow-lg hover:-translate-y-1 transition duration-200 flex flex-col"
-            >
-              <div className="h-24 bg-slate-100">
-                <img
-                  src={getActivityImage(act)}
-                  alt={act.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-              <div className="px-4 py-3 flex-1 flex flex-col justify-between">
-                <p className="font-semibold text-sm md:text-base mb-1 line-clamp-2">
-                  {act.title}
-                </p>
-                <p className="text-xs md:text-sm text-slate-500">
-                  Rp{(act.price || 0).toLocaleString()}
-                </p>
-              </div>
-            </Link>
-          ))}
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-lg font-semibold text-slate-900">
+            Aktivitas Populer
+          </h2>
+          <button
+            type="button"
+            onClick={() => navigate("/activity")}
+            className="text-xs text-slate-500 hover:text-slate-700"
+          >
+            Lihat semua
+          </button>
         </div>
+
+        {topActivities.length === 0 ? (
+          <p className="text-xs text-slate-500">
+            Belum ada aktivitas yang tersedia.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {topActivities.map((act) => (
+              <Link
+                key={act.id}
+                to={`/activity/${act.id}`}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition"
+              >
+                <div className="h-24 md:h-28 w-full bg-slate-100 overflow-hidden">
+                  <img
+                    src={
+                      act.imageUrls?.[0] ||
+                      act.thumbnail ||
+                      "https://images.pexels.com/photos/672532/pexels-photo-672532.jpeg?auto=compress&cs=tinysrgb&w=1200"
+                    }
+                    alt={act.title}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="px-4 py-3 flex-1 flex flex-col justify-between">
+                  <p className="font-semibold text-sm md:text-base mb-1 line-clamp-2">
+                    {act.title}
+                  </p>
+                  <p className="text-xs md:text-sm text-slate-500">
+                    Rp{(act.price || 0).toLocaleString("id-ID")}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

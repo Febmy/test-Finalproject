@@ -1,346 +1,565 @@
 // src/pages/admin/AdminActivities.jsx
 import { useEffect, useState } from "react";
 import api from "../../lib/api.js";
-import AdminLayout from "../../components/AdminLayout.jsx";
+import { useToast } from "../../context/ToastContext.jsx";
 import Spinner from "../../components/ui/Spinner.jsx";
 import EmptyState from "../../components/ui/EmptyState.jsx";
-import { useToast } from "../../context/ToastContext.jsx";
+import AdminLayout from "../../components/AdminLayout.jsx";
 
-const initialForm = {
-  title: "",
-  description: "",
-  city: "",
-  price: "",
-  imageUrl: "",
-};
+// ==================== KONFIG ENDPOINT ====================
+const CREATE_ACTIVITY_ENDPOINT = "/create-activity";
+const UPDATE_ACTIVITY_ENDPOINT = "/update-activity"; // dipakai: `${UPDATE_ACTIVITY_ENDPOINT}/${id}`
+const DELETE_ACTIVITY_ENDPOINT = "/delete-activity"; // dipakai: `${DELETE_ACTIVITY_ENDPOINT}/${id}`;
 
-function formatCurrency(amount) {
+// ==================== HELPER ====================
+function formatCurrency(value) {
+  if (value == null) return "-";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "-";
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,
-  }).format(amount || 0);
+  }).format(num);
 }
 
-function getSafeImageUrl(url, fallback) {
-  if (!url) return fallback;
+function extractErrorMessage(err) {
+  const res = err?.response;
+  const data = res?.data;
+
   try {
-    const parsed = new URL(url);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return url;
-    }
+    console.log(
+      "create/update-activity error detail JSON:",
+      JSON.stringify(data, null, 2)
+    );
   } catch {
-    // url tidak valid → pakai fallback
+    console.log("create/update-activity error detail (raw):", data);
   }
-  return fallback;
+
+  if (!data)
+    return err.message || "Terjadi kesalahan tanpa response dari server.";
+
+  if (typeof data === "string") return data;
+  if (typeof data.message === "string") return data.message;
+  if (typeof data.error === "string") return data.error;
+
+  if (
+    typeof data.code === "string" &&
+    typeof data.status === "string" &&
+    typeof data.message === "string"
+  ) {
+    return `${data.code} ${data.status} - ${data.message}`;
+  }
+
+  const firstString = Object.values(data).find((v) => typeof v === "string");
+  if (firstString) return firstString;
+
+  return "Gagal menyimpan aktivitas: " + JSON.stringify(data);
 }
+
+// ==================== KOMPONEN UTAMA ====================
+
+const initialForm = {
+  title: "",
+  description: "",
+  location: "",
+  price: "",
+  imageUrl: "",
+  categoryId: "", // string UUID dari dropdown
+};
 
 export default function AdminActivities() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [tableError, setTableError] = useState("");
+
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState("");
+
   const [form, setForm] = useState(initialForm);
+  const [editing, setEditing] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { showToast } = useToast();
 
-  const fetchActivities = async () => {
+  // -------- Fetch list activity --------
+  const loadActivities = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/activities?limit=100");
-      setActivities(res.data.data || []);
+      setTableError("");
+      const res = await api.get("/activities");
+      setActivities(res.data?.data || []);
     } catch (err) {
       console.error(
-        "Admin activities error:",
+        "Admin activities list error:",
         err.response?.data || err.message
       );
-      showToast({
-        type: "error",
-        message:
-          err.response?.data?.message ||
-          "Gagal memuat aktivitas. Coba cek kembali API key / token.",
-      });
+      setTableError("Gagal memuat data aktivitas.");
     } finally {
       setLoading(false);
     }
   };
 
+  // -------- Fetch categories untuk dropdown --------
+  const loadCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      setCategoriesError("");
+      const res = await api.get("/categories");
+      setCategories(res.data?.data || []);
+    } catch (err) {
+      console.error(
+        "Admin activities categories error:",
+        err.response?.data || err.message
+      );
+      setCategoriesError("Gagal memuat kategori.");
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchActivities();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadActivities();
+    loadCategories();
   }, []);
 
+  // -------- Form helpers --------
   const resetForm = () => {
     setForm(initialForm);
-    setEditingId(null);
+    setEditing(null);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const startCreate = () => {
+    resetForm();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleEditClick = (act) => {
-    setEditingId(act.id);
+  const startEdit = (activity) => {
+    setEditing(activity);
     setForm({
-      title: act.title || "",
-      description: act.description || "",
-      city: act.city || act.location || "",
-      price: act.price ?? "",
+      title: activity.title || "",
+      description: activity.description || "",
+      location: activity.location || "",
+      price: activity.price ?? "",
       imageUrl:
-        act.imageUrl ||
-        (Array.isArray(act.imageUrls) ? act.imageUrls[0] : "") ||
+        activity.imageUrl ||
+        (Array.isArray(activity.imageUrls) && activity.imageUrls[0]) ||
+        activity.thumbnail ||
         "",
+      categoryId:
+        activity.categoryId != null ? String(activity.categoryId) : "",
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDelete = async (id) => {
-    const ok = window.confirm("Yakin ingin menghapus aktivitas ini?");
-    if (!ok) return;
+  // -------- Submit create / update --------
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.title.trim()) {
+      showToast({ type: "error", message: "Judul aktivitas wajib diisi." });
+      return;
+    }
+
+    const categoryValue = form.categoryId?.trim();
+    if (!categoryValue) {
+      showToast({
+        type: "error",
+        message: "Kategori wajib dipilih.",
+      });
+      return;
+    }
+
+    // Opsional: cek format UUID
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(categoryValue)) {
+      showToast({
+        type: "error",
+        message:
+          "Category ID tidak valid. Pilih kategori dari dropdown atau refresh halaman.",
+      });
+      return;
+    }
+
+    const priceValue =
+      form.price === "" || form.price == null
+        ? null
+        : Number(String(form.price).replace(/[^\d]/g, ""));
+
+    const payload = {
+      title: form.title.trim(),
+      description: form.description,
+      location: form.location,
+      categoryId: categoryValue,
+    };
+
+    if (typeof priceValue === "number" && !Number.isNaN(priceValue)) {
+      payload.price = priceValue;
+    }
+
+    if (form.imageUrl) {
+      payload.imageUrl = form.imageUrl;
+      payload.imageUrls = [form.imageUrl];
+    }
+
+    const isEditing = Boolean(editing?.id);
 
     try {
-      await api.delete(`/delete-activity/${id}`);
-      showToast({ type: "success", message: "Aktivitas berhasil dihapus." });
-      await fetchActivities();
+      setIsSubmitting(true);
+
+      if (isEditing) {
+        // sesuai Postman: update-activity pakai POST
+        await api.post(`${UPDATE_ACTIVITY_ENDPOINT}/${editing.id}`, payload);
+        showToast({
+          type: "success",
+          message: "Aktivitas berhasil diperbarui.",
+        });
+      } else {
+        await api.post(CREATE_ACTIVITY_ENDPOINT, payload);
+        showToast({
+          type: "success",
+          message: "Aktivitas baru berhasil dibuat.",
+        });
+      }
+
+      resetForm();
+      await loadActivities();
+    } catch (err) {
+      console.error("Save activity error raw:", err);
+      const msg = extractErrorMessage(err);
+      showToast({
+        type: "error",
+        message: msg,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // -------- Delete --------
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm(
+      "Yakin ingin menghapus aktivitas ini? Tindakan ini tidak dapat dibatalkan."
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`${DELETE_ACTIVITY_ENDPOINT}/${id}`);
+      showToast({
+        type: "success",
+        message: "Aktivitas berhasil dihapus.",
+      });
+      await loadActivities();
     } catch (err) {
       console.error(
         "Delete activity error:",
         err.response?.data || err.message
       );
+      const msg = extractErrorMessage(err);
       showToast({
         type: "error",
-        message:
-          err.response?.data?.message || "Gagal menghapus aktivitas ini.",
+        message: msg,
       });
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    // ⚠️ Sesuaikan dengan body yang ada di Postman kalau ada field tambahan
-    const payload = {
-      title: form.title?.trim(),
-      description: form.description?.trim(),
-      city: form.city?.trim(),
-      location: form.city?.trim(), // beberapa API pakai "location"
-      price: Number(form.price) || 0,
-      imageUrl: form.imageUrl?.trim(),
-      imageUrls: form.imageUrl ? [form.imageUrl.trim()] : [],
-    };
-
-    try {
-      if (editingId) {
-        await api.post(`/update-activity/${editingId}`, payload);
-        showToast({
-          type: "success",
-          message: "Aktivitas berhasil diupdate ✅",
-        });
-      } else {
-        await api.post("/create-activity", payload);
-        showToast({
-          type: "success",
-          message: "Aktivitas baru berhasil dibuat ✅",
-        });
-      }
-
-      await fetchActivities();
-      resetForm();
-    } catch (err) {
-      console.error("Save activity error:", err.response?.data || err.message);
-
-      const apiMsg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        (typeof err.response?.data === "string" ? err.response.data : "") ||
-        "Gagal menyimpan aktivitas. Cek kembali field wajib di Postman.";
-
-      showToast({
-        type: "error",
-        message: apiMsg,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
+  // ==================== RENDER ====================
   return (
-    <AdminLayout title="Activity Management">
-      <div className="grid md:grid-cols-[1.4fr,1fr] gap-6">
-        {/* LIST ACTIVITIES */}
-        <section>
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">
-            Daftar Aktivitas
+    <AdminLayout
+      title="Activities"
+      description="Kelola aktivitas yang akan tampil di halaman user (ActivityList & ActivityDetail)."
+    >
+      {/* HEADER ATAS: JUDUL + TOMBOL TAMBAH */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-lg md:text-xl font-semibold text-slate-900">
+            Manajemen Aktivitas
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500">
+            Data yang kamu buat di sini akan otomatis digunakan di halaman
+            <span className="font-mono text-[11px] bg-slate-100 rounded px-2 py-[2px] mx-1">
+              /activity
+            </span>
+            dan
+            <span className="font-mono text-[11px] bg-slate-100 rounded px-2 py-[2px] mx-1">
+              /activity/:id
+            </span>
+            .
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={startCreate}
+          className="inline-flex items-center px-4 py-2 rounded-full bg-slate-900 text-white text-xs md:text-sm hover:bg-slate-800"
+        >
+          + Tambah Aktivitas
+        </button>
+      </div>
+
+      {/* GRID: FORM + TABEL */}
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1.2fr),minmax(0,1.8fr)]">
+        {/* FORM */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm">
+          <h2 className="text-sm md:text-base font-semibold text-slate-900 mb-3">
+            {editing ? "Edit Aktivitas" : "Buat Aktivitas Baru"}
           </h2>
 
-          {loading ? (
-            <Spinner />
-          ) : activities.length === 0 ? (
-            <EmptyState
-              title="Belum ada aktivitas."
-              description="Buat aktivitas baru menggunakan form di sebelah kanan."
-            />
-          ) : (
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-              {activities.map((act) => (
-                <div
-                  key={act.id}
-                  className="flex items-start justify-between gap-3 border border-slate-200 rounded-xl p-3 bg-slate-50"
-                >
-                  <div className="flex gap-3">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-200 shrink-0">
-                      <img
-                        src={getSafeImageUrl(
-                          act.imageUrl ||
-                            (Array.isArray(act.imageUrls)
-                              ? act.imageUrls[0]
-                              : ""),
-                          "https://images.pexels.com/photos/672532/pexels-photo-672532.jpeg?auto=compress&cs=tinysrgb&w=600"
-                        )}
-                        alt={act.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {act.title}
-                      </p>
-                      <p className="text-[11px] text-slate-500 line-clamp-2">
-                        {act.description}
-                      </p>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        {act.city || act.location || "-"} ·{" "}
-                        {formatCurrency(act.price)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleEditClick(act)}
-                      className="px-3 py-1 text-[11px] rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(act.id)}
-                      className="px-3 py-1 text-[11px] rounded-full border border-red-200 text-red-600 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* FORM CREATE / UPDATE */}
-        <section>
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">
-            {editingId ? "Edit Aktivitas" : "Buat Aktivitas Baru"}
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-3 text-xs md:text-sm"
+          >
+            {/* TITLE */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
-                Judul
+              <label className="block text-[11px] font-medium text-slate-600">
+                Judul Aktivitas*
               </label>
               <input
                 type="text"
-                name="title"
                 value={form.title}
-                onChange={handleChange}
-                required
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, title: e.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                placeholder="Contoh: Sea World Ancol"
               />
             </div>
 
+            {/* LOCATION */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
-                Deskripsi
-              </label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={3}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
-                Kota / Lokasi
+              <label className="block text-[11px] font-medium text-slate-600">
+                Lokasi
               </label>
               <input
                 type="text"
-                name="city"
-                value={form.city}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                value={form.location}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, location: e.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                placeholder="Contoh: Jakarta, Indonesia"
               />
             </div>
 
+            {/* CATEGORY DROPDOWN */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
+              <label className="block text-[11px] font-medium text-slate-600">
+                Category*
+              </label>
+
+              <select
+                value={form.categoryId}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, categoryId: e.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white"
+              >
+                <option value="">-- Pilih kategori --</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+
+              {categoriesLoading && (
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Memuat kategori...
+                </p>
+              )}
+              {categoriesError && (
+                <p className="text-[10px] text-red-600 mt-1">
+                  {categoriesError}
+                </p>
+              )}
+              {!categoriesLoading &&
+                !categoriesError &&
+                categories.length === 0 && (
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Belum ada data kategori dari API.
+                  </p>
+                )}
+            </div>
+
+            {/* PRICE */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium text-slate-600">
                 Harga (IDR)
               </label>
               <input
                 type="number"
-                name="price"
+                min="0"
                 value={form.price}
-                onChange={handleChange}
-                min={0}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, price: e.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                placeholder="Contoh: 250000"
               />
             </div>
 
+            {/* IMAGE URL */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
-                Image URL
+              <label className="block text-[11px] font-medium text-slate-600">
+                Gambar (URL)
               </label>
               <input
                 type="text"
-                name="imageUrl"
                 value={form.imageUrl}
-                onChange={handleChange}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, imageUrl: e.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                placeholder="https://images.pexels.com/..."
               />
-              <p className="text-[11px] text-slate-500">
-                Gunakan URL gambar (http/https). Misal dari Unsplash atau Cloud
-                Storage.
-              </p>
+              {form.imageUrl && (
+                <div className="mt-2">
+                  <p className="text-[11px] text-slate-500 mb-1">
+                    Preview gambar:
+                  </p>
+                  <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100">
+                    <img
+                      src={form.imageUrl}
+                      alt="Preview aktivitas"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "https://images.pexels.com/photos/346885/pexels-photo-346885.jpeg?auto=compress&cs=tinysrgb&w=1200";
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 rounded-full bg-slate-900 text-white text-sm hover:bg-slate-800 disabled:opacity-60"
-              >
-                {saving
-                  ? editingId
-                    ? "Menyimpan..."
-                    : "Membuat..."
-                  : editingId
-                  ? "Simpan Perubahan"
-                  : "Buat Aktivitas"}
-              </button>
-              {editingId && (
+            {/* DESCRIPTION */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-medium text-slate-600">
+                Deskripsi
+              </label>
+              <textarea
+                rows={4}
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none"
+                placeholder="Ceritakan singkat tentang aktivitas ini..."
+              />
+            </div>
+
+            {/* BUTTONS */}
+            <div className="flex items-center justify-between gap-2 pt-2">
+              {editing && (
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-3 py-2 rounded-full border border-slate-300 text-xs text-slate-700 hover:bg-slate-50"
+                  className="text-[11px] md:text-xs text-slate-500 hover:text-slate-700 underline"
                 >
-                  Batal Edit
+                  Batal edit
                 </button>
               )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="ml-auto inline-flex items-center px-4 py-2 rounded-full bg-slate-900 text-white text-xs md:text-sm disabled:bg-slate-400"
+              >
+                {isSubmitting
+                  ? "Menyimpan..."
+                  : editing
+                  ? "Simpan Perubahan"
+                  : "Buat Aktivitas"}
+              </button>
             </div>
           </form>
+        </section>
+
+        {/* TABEL LIST AKTIVITAS */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm">
+          <h2 className="text-sm md:text-base font-semibold text-slate-900 mb-3">
+            Daftar Aktivitas
+          </h2>
+
+          {loading ? (
+            <div className="py-6">
+              <Spinner />
+            </div>
+          ) : tableError ? (
+            <p className="text-xs md:text-sm text-red-600">{tableError}</p>
+          ) : activities.length === 0 ? (
+            <EmptyState
+              title="Belum ada aktivitas."
+              description="Buat aktivitas pertama kamu melalui form di sebelah kiri."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-[11px] md:text-xs text-left text-slate-700">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="py-2 pr-2 font-semibold">Title</th>
+                    <th className="py-2 px-2 font-semibold hidden md:table-cell">
+                      Lokasi
+                    </th>
+                    <th className="py-2 px-2 font-semibold hidden md:table-cell">
+                      Kategori
+                    </th>
+                    <th className="py-2 px-2 font-semibold">Harga</th>
+                    <th className="py-2 pl-2 font-semibold text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activities.map((act) => (
+                    <tr key={act.id} className="border-b border-slate-100">
+                      <td className="py-2 pr-2 align-top">
+                        <div className="max-w-[200px] md:max-w-xs">
+                          <p className="font-medium text-slate-900 line-clamp-2">
+                            {act.title}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 align-top hidden md:table-cell">
+                        <span className="text-[11px] text-slate-500">
+                          {act.location || "-"}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 align-top hidden md:table-cell">
+                        <span className="text-[11px] text-slate-500">
+                          {act.category?.name || act.categoryId || "-"}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 align-top whitespace-nowrap">
+                        <span className="text-[11px] font-medium">
+                          {formatCurrency(act.price || 0)}
+                        </span>
+                      </td>
+                      <td className="py-2 pl-2 align-top text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(act)}
+                            className="px-2 py-1 rounded-full border border-slate-300 text-[11px] hover:bg-slate-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(act.id)}
+                            className="px-2 py-1 rounded-full border border-red-200 text-[11px] text-red-600 hover:bg-red-50"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </AdminLayout>

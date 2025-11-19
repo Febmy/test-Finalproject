@@ -4,6 +4,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../lib/api.js";
 import { useToast } from "../context/ToastContext.jsx";
 
+function formatCurrency(value) {
+  if (value == null) return "-";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "-";
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
 export default function ActivityDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -12,56 +23,33 @@ export default function ActivityDetail() {
   const [activity, setActivity] = useState(null);
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
+        setError("");
         const res = await api.get(`/activity/${id}`);
-        setActivity(res.data.data);
+        setActivity(res.data?.data || null);
       } catch (err) {
         console.error(
           "Activity detail error:",
           err.response?.data || err.message
         );
-        setError("Gagal memuat detail aktivitas.");
-        showToast({
-          type: "error",
-          message: "Gagal memuat detail aktivitas.",
-        });
+        setError(
+          err.response?.status === 404
+            ? "Aktivitas tidak ditemukan."
+            : "Gagal memuat detail aktivitas."
+        );
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [id, showToast]);
-
-  const handleAddToCart = async () => {
-    if (!id) return;
-
-    try {
-      await api.post("/add-cart", {
-        activityId: id,
-        bookingDate: date || null,
-      });
-
-      showToast({
-        type: "success",
-        message: "Berhasil menambahkan ke keranjang.",
-      });
-
-      navigate("/cart");
-    } catch (err) {
-      console.error("Add to cart error:", err.response?.data || err.message);
-      showToast({
-        type: "error",
-        message:
-          err.response?.data?.message || "Gagal menambahkan ke keranjang.",
-      });
-    }
-  };
+  }, [id]);
 
   const getImage = (act) =>
     act?.imageUrl ||
@@ -69,68 +57,130 @@ export default function ActivityDetail() {
     act?.thumbnail ||
     "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
+  const handleAddToCart = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showToast({
+        type: "error",
+        message: "Silakan login terlebih dahulu untuk memesan aktivitas.",
+      });
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setAdding(true);
+      await api.post("/add-cart", {
+        activityId: id,
+        bookingDate: date || null,
+      });
+      showToast({
+        type: "success",
+        message: "Berhasil menambahkan ke cart.",
+      });
+      navigate("/cart");
+    } catch (err) {
+      console.error("Add to cart error:", err.response?.data || err.message);
+      showToast({
+        type: "error",
+        message: "Gagal menambahkan ke cart.",
+      });
+    } finally {
+      setAdding(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <div className="h-64 rounded-3xl bg-slate-200 animate-pulse" />
-        <div className="h-32 rounded-3xl bg-slate-200 animate-pulse" />
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
+        <div className="h-7 w-48 bg-slate-200 rounded-full animate-pulse" />
+        <div className="h-4 w-32 bg-slate-200 rounded-full animate-pulse" />
+        <div className="h-52 bg-slate-200 rounded-3xl animate-pulse" />
+        <div className="h-20 bg-slate-200 rounded-2xl animate-pulse" />
       </div>
     );
   }
 
-  if (error) {
+  if (error || !activity) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <p className="text-sm text-red-600">{error}</p>
-      </div>
-    );
-  }
-
-  if (!activity) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <p className="text-sm text-slate-600">
-          Aktivitas tidak ditemukan atau sudah tidak tersedia.
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
+        <p className="text-sm md:text-base text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+          {error || "Aktivitas tidak ditemukan."}
         </p>
+        <button
+          type="button"
+          onClick={() => navigate("/activity")}
+          className="inline-flex px-4 py-2 rounded-full border border-slate-300 text-xs md:text-sm text-slate-700 hover:bg-slate-100"
+        >
+          Kembali ke daftar aktivitas
+        </button>
       </div>
     );
   }
-
-  const imgSrc = getImage(activity);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-      {/* ATAS: GAMBAR + BOOKING */}
-      <section className="grid md:grid-cols-[1.7fr,1.1fr] gap-6 items-start">
-        {/* KIRI: GAMBAR + INFO SINGKAT */}
-        <div className="space-y-4">
-          <div className="rounded-3xl overflow-hidden bg-slate-100">
-            <img
-              src={imgSrc}
-              alt={activity.title}
-              className="w-full h-[260px] md:h-[320px] object-cover"
-              loading="lazy"
-            />
-          </div>
+    <div className="max-w-5xl mx-auto px-4 py-6 md:py-8 space-y-6">
+      {/* Breadcrumb */}
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="text-[11px] text-slate-500 hover:text-slate-700 mb-1"
+      >
+        ← Kembali
+      </button>
 
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-2 shadow-sm">
-            <h1 className="text-xl md:text-2xl font-bold text-slate-900">
-              {activity.title}
-            </h1>
-            {activity.location && (
-              <p className="text-xs md:text-sm text-slate-500">
-                {activity.location}
-              </p>
-            )}
-            <p className="text-sm md:text-base font-semibold text-slate-900">
-              Rp{(activity.price || 0).toLocaleString()}
-            </p>
-          </div>
+      {/* Header */}
+      <header className="space-y-2">
+        <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
+          Activity Detail
+        </p>
+        <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
+          {activity.title}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          {activity.location && (
+            <span className="text-[11px] md:text-xs text-slate-500">
+              {activity.location}
+            </span>
+          )}
+          {activity.category?.name && (
+            <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 text-[10px] px-2 py-0.5">
+              {activity.category.name}
+            </span>
+          )}
+          {activity.price != null && (
+            <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5">
+              {formatCurrency(activity.price)}
+            </span>
+          )}
+        </div>
+      </header>
+
+      {/* Image */}
+      <div className="w-full h-52 md:h-72 rounded-3xl overflow-hidden bg-slate-100">
+        <img
+          src={getImage(activity)}
+          alt={activity.title}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
+
+      {/* Content */}
+      <section className="grid gap-5 md:grid-cols-[minmax(0,1.6fr),minmax(0,1.1fr)]">
+        {/* Deskripsi */}
+        <div className="space-y-3">
+          <h2 className="text-sm md:text-base font-semibold text-slate-900">
+            Deskripsi
+          </h2>
+          <p className="text-xs md:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+            {activity.description || "Belum ada deskripsi untuk aktivitas ini."}
+          </p>
         </div>
 
-        {/* KANAN: BOOKING BOX */}
-        <aside className="bg-slate-900 text-white rounded-3xl p-6 md:p-7 flex flex-col justify-between gap-4 shadow-sm">
-          <div className="space-y-3">
+        {/* Booking Card */}
+        <div className="bg-slate-900 text-white rounded-3xl p-4 md:p-5 space-y-3 shadow-sm">
+          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
               Booking
             </p>
@@ -138,60 +188,42 @@ export default function ActivityDetail() {
               Pilih tanggal perjalananmu, lalu lanjutkan ke keranjang untuk
               menyelesaikan pembayaran.
             </p>
+          </div>
 
-            <div className="space-y-2 mt-2">
-              <label className="text-xs uppercase tracking-wide text-slate-300">
-                Tanggal
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-slate-500"
-              />
-            </div>
+          <div className="space-y-2 mt-2">
+            <label className="text-[11px] uppercase tracking-wide text-slate-300">
+              Tanggal
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-xl border border-slate-600 bg-slate-900/40 text-xs md:text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-slate-200"
+            />
+            <p className="text-[10px] text-slate-400">
+              Boleh dikosongkan jika tanggal masih tentative.
+            </p>
+          </div>
+
+          <div className="pt-2 border-t border-slate-700 mt-2">
+            <p className="text-xs text-slate-200 mb-2">
+              Estimasi harga mulai dari:
+            </p>
+            <p className="text-base md:text-lg font-semibold text-white">
+              {formatCurrency(activity.price)}
+            </p>
           </div>
 
           <button
+            type="button"
             onClick={handleAddToCart}
-            className="w-full mt-4 rounded-xl bg-white text-slate-900 font-medium py-2 text-sm
-                       hover:bg-slate-100 transition"
+            disabled={adding}
+            className="mt-3 w-full inline-flex justify-center items-center rounded-full bg-white text-slate-900 text-xs md:text-sm px-4 py-2.5 font-medium hover:bg-slate-100 disabled:bg-slate-400 disabled:text-slate-100"
           >
-            Add to Cart
+            {adding ? "Menambahkan..." : "Tambah ke Cart"}
           </button>
-        </aside>
+        </div>
       </section>
-
-      {/* DESCRIPTION */}
-      <section className="bg-white rounded-3xl border border-slate-200 p-6 md:p-7 shadow-sm">
-        <h2 className="font-semibold mb-2 text-slate-900">Description</h2>
-        <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
-          {activity.description || "Tidak ada deskripsi untuk aktivitas ini."}
-        </p>
-      </section>
-
-      {/* TOMBOL BAWAH */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-end">
-        <button
-          className="flex-1 sm:flex-none border rounded-xl px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          onClick={() => navigate(-1)}
-        >
-          Back
-        </button>
-        <button
-          className="flex-1 sm:flex-none border rounded-xl px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          onClick={() => navigate("/activity")}
-        >
-          Activity
-        </button>
-        <button
-          className="flex-1 sm:flex-none bg-black text-white rounded-xl px-4 py-2 text-sm hover:bg-slate-900"
-          onClick={() => navigate("/checkout")}
-        >
-          Checkout
-        </button>
-      </div>
     </div>
   );
 }
