@@ -161,73 +161,193 @@ VITE_API_BASE_URL=https://travel-journal-api-bootcamp.do.dibimbing.id
 VITE_API_KEY=24405e01-fbc1-45a5-9f5a-xxxxxx   # ganti dengan API_KEY milikmu
 ```
 
-# Final Project - TravelApp (Front End Web Development)
+# TravelApp – Final Project Frontend Web Development
 
-Final Project ini adalah aplikasi **TravelApp** berbasis React yang menampilkan daftar aktivitas perjalanan, detail aktivitas, fitur cart & checkout, hingga riwayat transaksi pengguna.
+TravelApp adalah aplikasi pemesanan aktivitas wisata sederhana yang terhubung dengan **Travel Journal API**.  
+Project ini memiliki **dua sisi**:
 
-Aplikasi ini dibangun dengan fokus pada:
+- **User App** – user bisa menjelajah aktivitas, memasukkan ke keranjang, menggunakan kode promo, dan checkout.
+- **Admin Panel** – admin bisa mengelola aktivitas, promo/banner, melihat semua transaksi, dan mengatur status pembayaran.
 
-- **Responsiveness** (mobile–first)
-- **Error handling yang jelas** (toast global)
-- **Struktur folder yang rapi & Single Responsibility Principle**
-- **Kerapihan kode dan pemisahan concerns** (API, context, UI components)
+Repo ini dibuat sebagai **Final Project** program **Front End Web Development Bootcamp**.
 
 ---
 
 ## 🚀 Tech Stack
 
-- **React + Vite**
-- **React Router DOM** – routing halaman
-- **Axios** – komunikasi ke REST API
-- **Tailwind CSS** (utility-first styling)
-- **Context API** – untuk Toast (global feedback)
+- **React 18** + **Vite**
+- **React Router DOM**
+- **Tailwind CSS**
+- **Axios** untuk HTTP request
+- LocalStorage (menyimpan token & profil user)
+- Travel Journal API (Dibimbing Bootcamp)
 
 ---
 
-## 📂 Project Structure
+## 📦 Fitur Utama
 
-```txt
+### 1. Public / User (tanpa login)
+
+- Melihat **banner promo** di halaman utama.
+- Melihat daftar **activity**:
+  - List semua aktivitas.
+  - Filter berdasarkan kategori.
+- Melihat **detail activity**:
+  - Deskripsi lengkap.
+  - Harga.
+  - Gambar.
+- Halaman Promo: menampilkan promo yang aktif dari API.
+
+### 2. User Login
+
+- **Register & Login** menggunakan endpoint Auth Travel Journal.
+- Token JWT disimpan di `localStorage` dan dipakai untuk request protected.
+- **Profile Page**:
+  - Menampilkan nama & email user.
+  - Bisa melihat data user yang sedang login.
+
+### 3. Cart & Checkout
+
+- **Cart Page**
+
+  - Menambahkan aktivitas ke cart dari halaman detail aktivitas.
+  - Melihat daftar item dalam cart.
+  - Mengubah **quantity** item.
+  - Menghapus item dari cart.
+  - Menghitung total harga berdasarkan data dari API.
+
+- **Checkout Page**
+  - Mengambil **payment methods** dari API dan memilih metode pembayaran.
+  - Mengambil **cartIds** dari API, lalu membuat transaksi lewat endpoint `create-transaction`.
+  - Mendukung **kode promo**:
+    - Input promo code.
+    - Validasi ke endpoint promo.
+    - Mengurangi total harga jika memenuhi `minimum_claim_price`.
+  - Menampilkan total harga **sebelum & sesudah** promo.
+  - Menampilkan toast untuk success / error.
+
+### 4. User Transactions
+
+- Halaman **My Transactions**:
+  - Menampilkan riwayat transaksi user yang login.
+  - Menampilkan status transaksi: `PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`.
+  - Format tanggal dan nominal dalam format Indonesia.
+
+### 5. Admin Panel
+
+> Admin route hanya bisa diakses jika user **login** sebagai admin  
+> (role `"admin"` disimpan di `userProfile` di localStorage).
+
+Admin panel dapat diakses di `/admin` dan memiliki beberapa menu:
+
+#### a. Dashboard
+
+- Ringkasan angka:
+  - Total Activities.
+  - Total Promos.
+  - Total Transactions.
+  - Total Users.
+- Angka diambil langsung dari API yang sama dengan halaman lain.
+
+#### b. Users Management
+
+- Mengambil semua user dari endpoint admin (`/all-user`).
+- Menampilkan list nama, email, dan role saat ini.
+- Admin bisa mengubah **role user** (`user` ⇄ `admin`) via endpoint `update-user-role/{id}`.
+
+#### c. Activities Management
+
+- Melihat semua `activities` dari API.
+- **Create / Update Activity**:
+  - Mengambil daftar **category** dari endpoint `categories`.
+  - Admin bisa memilih kategori dari dropdown, tidak perlu copy-paste `categoryId`.
+  - Menambahkan / mengedit:
+    - `title`
+    - `description`
+    - `price`
+    - `imageUrls` (array string)
+- **Delete Activity**:
+  - Menghapus activity lewat endpoint delete.
+- Semua perubahan akan langsung tercermin di sisi user:
+  - `/activity` (ActivityList)
+  - `/activity/:id` (ActivityDetail)
+
+#### d. Promos & Banner Management
+
+- **Promo CRUD**:
+  - Create / update / delete promo.
+  - Field yang digunakan:
+    - `title`
+    - `promo_code`
+    - `minimum_claim_price`
+    - `promo_discount_price`
+    - tanggal berlaku, dsb (sesuai API).
+- **Banner CRUD**:
+  - Mengelola banner yang tampil di homepage user.
+- Section promo & banner di user side membaca data dari endpoint yang sama.
+
+#### e. Transactions Management
+
+- Mengambil **semua transaksi** dari endpoint admin (`/all-transactions`).
+- Filter berdasarkan status:
+  - `Semua`, `Pending`, `Success`, `Failed`, `Cancelled`.
+- Menampilkan:
+  - ID transaksi.
+  - User (nama + email).
+  - Total (menggunakan `totalAmount` dari API).
+  - Status.
+  - Payment method (nama & virtual account).
+  - Tanggal dibuat.
+- **Approve / Reject pembayaran**:
+  - Untuk transaksi berstatus `pending`, admin bisa:
+    - `Approve (Success)` → kirim payload `{ status: "success" }`
+    - `Reject (Failed)` → kirim payload `{ status: "failed" }`
+  - Setelah diubah, status juga berubah di halaman transaksi user.
+
+---
+
+## 📁 Struktur Folder (singkat)
+
+```bash
 src/
   components/
-    layout/
-      Navbar.jsx        # Navigasi utama (desktop + mobile menu) + logout toast
-      Footer.jsx        # Footer global
-      PageContainer.jsx # Wrapper layout untuk semua halaman
-      ScrollToTop.jsx   # Scroll ke atas setiap ganti route
-
     activity/
-      ActivityCard.jsx  # Kartu aktivitas di listing
-
+      ActivityCard.jsx
     cart/
-      CartItem.jsx      # Kartu item keranjang (dipakai di Cart)
-
+      CartItem.jsx
+    layout/
+      Navbar.jsx
+      Footer.jsx
+      PageContainer.jsx
+      ScrollToTop.jsx
+    transactions/
+      PaymentForm.jsx
     ui/
-      EmptyState.jsx    # Komponen state kosong (tidak ada data)
-      Spinner.jsx       # Komponen loading / spinner
-
-  pages/
-    Home.jsx            # Halaman utama (hero + rekomendasi aktivitas)
-    ActivityList.jsx    # Daftar semua aktivitas
-    ActivityDetail.jsx  # Detail 1 aktivitas + add to cart
-    Cart.jsx            # Keranjang + update quantity, clear, dan ke checkout
-    Checkout.jsx        # Halaman konfirmasi pembayaran + create transaction
-    Transactions.jsx    # Halaman My Transactions + filter + cancel
-    Profile.jsx         # Detail profil user (GET /user)
-    Promos.jsx          # Daftar promo dari endpoint /promos
-    NotFound.jsx        # Halaman 404
-
-    auth/
-      Login.jsx         # Login user, simpan token, toast feedback
-      Register.jsx      # Register user baru
-
+      EmptyState.jsx
+      Spinner.jsx
   context/
-    ToastContext.jsx    # Global toast (success/error) untuk semua aksi penting
-
+    ToastContext.jsx
   lib/
-    api.js              # Axios instance (baseURL, interceptor token)
-    format.js           # Helper formatCurrency & formatDateTime
-
-  App.jsx               # Routing + proteksi route (RequireAuth)
-  main.jsx              # Root render, bungkus dengan BrowserRouter + ToastProvider
-  index.css             # Global styles
+    api.js          # konfigurasi axios (baseURL, apiKey, interceptor)
+    format.js       # helper format tanggal & currency
+  pages/
+    user/
+      Home.jsx
+      ActivityList.jsx
+      ActivityDetail.jsx
+      Cart.jsx
+      Checkout.jsx
+      Transactions.jsx
+      Profile.jsx
+      auth/
+        Login.jsx
+        Register.jsx
+    admin/
+      AdminDashboard.jsx
+      AdminTransactions.jsx
+      AdminUsers.jsx
+      AdminActivities.jsx
+      AdminPromos.jsx
+  App.jsx           # routing + proteksi route user & admin
+  main.jsx          # React root
 ```
