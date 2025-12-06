@@ -3,6 +3,15 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "../../context/ToastContext.jsx";
 import api from "../../lib/api.js";
+import {
+  Globe,
+  Bell,
+  ShoppingCart,
+  User,
+  ChevronDown,
+  Menu,
+  X,
+} from "lucide-react";
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -18,6 +27,7 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // ==== Ambil profile dari localStorage ====
   useEffect(() => {
@@ -74,12 +84,9 @@ export default function Navbar() {
     };
   }, [isAdmin, location.pathname]);
 
-  // ==== Ambil jumlah notifikasi dari /notifications ====
+  // ==== Ambil jumlah notifikasi ====
   useEffect(() => {
     const token = localStorage.getItem("token");
-
-    // Tidak ada token = belum login → tidak perlu notif
-    // Admin juga tidak perlu notif versi user
     if (!token || isAdmin) {
       setNotifCount(0);
       return;
@@ -89,42 +96,29 @@ export default function Navbar() {
 
     async function fetchNotifCount() {
       try {
-        // Pakai endpoint yang sudah ada
         const res = await api.get("/my-transactions");
         const list = res.data?.data || [];
-
-        // Hitung transaksi yang masih pending
         const pending = list.filter((tx) => {
           const status = (tx.status || tx.paymentStatus || "").toLowerCase();
           return status === "pending";
         });
 
         const count = pending.length;
-
         if (!cancelled) {
           setNotifCount(count);
-          // Simpan supaya halaman /notifications bisa baca
           localStorage.setItem("travelapp_notification_count", String(count));
         }
       } catch (err) {
-        if (!cancelled) {
-          setNotifCount(0);
-        }
-        console.error(
-          "Navbar: gagal ambil transaksi untuk notif:",
-          err.response?.data || err.message
-        );
+        if (!cancelled) setNotifCount(0);
       }
     }
 
     fetchNotifCount();
-
     return () => {
       cancelled = true;
     };
   }, [location.pathname, isAdmin]);
 
-  // ==== Helper nama user ====
   const displayName =
     profile?.name ||
     profile?.fullName ||
@@ -132,7 +126,6 @@ export default function Navbar() {
     profile?.email ||
     "Traveler";
 
-  // ==== Logout ====
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userProfile");
@@ -141,22 +134,14 @@ export default function Navbar() {
     setIsAdmin(false);
     setCartCount(0);
     setNotifCount(0);
-
     navigate("/login", { replace: true });
-    showToast({
-      type: "success",
-      message: "Berhasil logout dari TravelApp.",
-    });
-  };
-
-  const handleBellClick = () => {
-    navigate("/notifications");
+    showToast({ type: "success", message: "Berhasil logout dari TravelApp." });
   };
 
   const userNavLinks = [
     { to: "/", label: "Home" },
     { to: "/activity", label: "Activity" },
-    { to: "/promos", label: "Promo" }, // <== pastikan /promos, bukan /promo
+    { to: "/promos", label: "Promo" },
   ];
 
   const adminNavLinks = [
@@ -168,208 +153,233 @@ export default function Navbar() {
   ];
 
   const navLinks = isAdmin ? adminNavLinks : userNavLinks;
-
   const isLoggedIn = Boolean(localStorage.getItem("token"));
 
   return (
-    <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-100">
-      <div className="max-w-6xl mx-auto px-4 lg:px-0 h-16 flex items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <Link
-            to={isAdmin ? "/admin" : "/"}
-            className="flex items-center gap-2"
-          >
-            <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-xs font-semibold text-white">
-              TA
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold text-slate-900">TravelApp</p>
-              <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
-                {isAdmin ? "Admin Panel" : "Smart Travel"}
-              </p>
-            </div>
-          </Link>
-        </div>
-
-        {/* Nav links (desktop) */}
-        <div className="hidden md:flex items-center gap-4">
-          {navLinks.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                classNames(
-                  "text-sm px-2 py-1 rounded-full transition",
-                  isActive
-                    ? "text-slate-900 font-semibold"
-                    : "text-slate-500 hover:text-slate-900"
-                )
-              }
+    <nav className="sticky top-0 z-50 bg-gradient-to-r from-teal-900 via-blue-900 to-purple-900 text-white shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link
+              to={isAdmin ? "/admin" : "/"}
+              className="flex items-center space-x-3"
             >
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+                <Globe className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <span className="text-xl font-bold">TravelApp</span>
+                <p className="text-xs text-blue-200">
+                  {isAdmin ? "Admin Panel" : "Smart Travel"}
+                </p>
+              </div>
+            </Link>
+          </div>
 
-        {/* Right section */}
-        <div className="flex items-center gap-3">
-          {/* Notif bell */}
-          {isLoggedIn && (
-            <button
-              type="button"
-              onClick={handleBellClick}
-              className="relative w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center bg-white hover:bg-slate-50"
-            >
-              <span className="text-lg">🔔</span>
-              {notifCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-                  {notifCount > 9 ? "9+" : notifCount}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* Cart (user saja) */}
-          {!isAdmin && (
-            <button
-              type="button"
-              onClick={() => navigate("/cart")}
-              className="relative flex items-center gap-2 text-xs md:text-sm bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-slate-800"
-            >
-              <span role="img" aria-label="cart">
-                🛒
-              </span>
-              <span>Cart</span>
-              {cartCount > 0 && (
-                <span className="ml-1 min-w-[1.3rem] h-[1.3rem] rounded-full bg-white text-slate-900 text-[11px] flex items-center justify-center">
-                  {cartCount > 9 ? "9+" : cartCount}
-                </span>
-              )}
-            </button>
-          )}
-
-          {/* User dropdown / Login button */}
-          {isLoggedIn ? (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 hover:bg-slate-50"
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
+            {navLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  classNames(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "text-blue-100 hover:bg-white/10 hover:text-white"
+                  )
+                }
+                onClick={() => setMobileMenuOpen(false)}
               >
-                <div className="w-7 h-7 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-                <div className="hidden sm:flex flex-col items-start leading-tight">
-                  <span className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
-                    {isAdmin ? "Admin Panel" : "Traveler"}
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          {/* Right Section */}
+          <div className="flex items-center space-x-4">
+            {/* Notifications */}
+            {isLoggedIn && (
+              <button
+                onClick={() => navigate("/notifications")}
+                className="relative p-2 rounded-full hover:bg-white/10 transition"
+              >
+                <Bell className="h-5 w-5" />
+                {notifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {notifCount > 9 ? "9+" : notifCount}
                   </span>
-                  <span className="text-xs font-medium text-slate-900 max-w-[7rem] truncate">
-                    {displayName}
-                  </span>
-                </div>
-                <span className="text-xs text-slate-400">▾</span>
+                )}
               </button>
+            )}
 
-              {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-52 rounded-2xl border border-slate-100 bg-white shadow-lg py-2 text-sm">
-                  {isAdmin ? (
-                    <>
-                      <p className="px-3 pb-2 text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                        Admin Panel
-                      </p>
-                      <NavLink
-                        to="/admin"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Dashboard
-                      </NavLink>
-                      <NavLink
-                        to="/admin/activities"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Activities
-                      </NavLink>
-                      <NavLink
-                        to="/admin/promos"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Promos
-                      </NavLink>
-                      <NavLink
-                        to="/admin/transactions"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Transactions
-                      </NavLink>
-                      <NavLink
-                        to="/admin/users"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Users
-                      </NavLink>
-                    </>
-                  ) : (
-                    <>
-                      <p className="px-3 pb-2 text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                        Traveler
-                      </p>
-                      <NavLink
-                        to="/profile"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Profile
-                      </NavLink>
-                      <NavLink
-                        to="/transactions"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        My Transactions
-                      </NavLink>
-                      <NavLink
-                        to="/wishlist"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Wishlist
-                      </NavLink>
-                      <NavLink
-                        to="/help"
-                        className="block px-3 py-1.5 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Help Center
-                      </NavLink>
-                    </>
-                  )}
+            {/* Cart */}
+            {!isAdmin && isLoggedIn && (
+              <button
+                onClick={() => navigate("/cart")}
+                className="relative flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full transition"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                <span>Cart</span>
+                {cartCount > 0 && (
+                  <span className="bg-white text-blue-700 text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </button>
+            )}
 
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full text-left px-3 py-1.5 text-red-500 hover:bg-red-50 text-sm mt-1 border-t border-slate-100"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
+            {/* User Menu / Login */}
+            {isLoggedIn ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center space-x-3 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full transition"
+                >
+                  <div className="w-8 h-8 rounded-full bg-white text-blue-700 flex items-center justify-center font-bold">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hidden md:block text-left">
+                    <p className="text-sm font-medium">{displayName}</p>
+                    <p className="text-xs text-blue-200">
+                      {isAdmin ? "Admin" : "Traveler"}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 transition ${
+                      userMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50">
+                    {isAdmin ? (
+                      <>
+                        <div className="px-4 py-2 text-xs text-gray-500 uppercase">
+                          Admin Panel
+                        </div>
+                        <NavLink
+                          to="/admin"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Dashboard
+                        </NavLink>
+                        <NavLink
+                          to="/admin/activities"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Activities
+                        </NavLink>
+                        <NavLink
+                          to="/admin/promos"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Promos
+                        </NavLink>
+                        <NavLink
+                          to="/admin/transactions"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Transactions
+                        </NavLink>
+                        <NavLink
+                          to="/admin/users"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Users
+                        </NavLink>
+                      </>
+                    ) : (
+                      <>
+                        <div className="px-4 py-2 text-xs text-gray-500 uppercase">
+                          Traveler
+                        </div>
+                        <NavLink
+                          to="/profile"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Profile
+                        </NavLink>
+                        <NavLink
+                          to="/transactions"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          My Transactions
+                        </NavLink>
+                        <NavLink
+                          to="/wishlist"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Wishlist
+                        </NavLink>
+                        <NavLink
+                          to="/help"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50"
+                        >
+                          Help Center
+                        </NavLink>
+                      </>
+                    )}
+                    <div className="border-t my-1"></div>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate("/login")}
+                className="bg-white text-blue-700 px-6 py-2 rounded-full font-medium hover:bg-blue-50 transition"
+              >
+                Login / Register
+              </button>
+            )}
+
+            {/* Mobile Menu Button */}
             <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="text-xs md:text-sm font-medium text-slate-900 border border-slate-200 rounded-full px-3 py-1.5 hover:bg-slate-50"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-md hover:bg-white/10"
             >
-              Login / Register
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </button>
-          )}
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white/95 backdrop-blur-sm rounded-xl mt-2 py-4 shadow-xl">
+            <div className="space-y-1 px-4">
+              {navLinks.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    classNames(
+                      "block px-4 py-3 rounded-lg text-base font-medium",
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-700 hover:bg-blue-50"
+                    )
+                  }
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -28,33 +28,6 @@ export default function Promos() {
     load();
   }, []);
 
-  if (error) {
-    return (
-      <section className="space-y-4">
-        <header className="space-y-1">
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-            Promos
-          </h1>
-          <p className="text-sm text-slate-600">
-            Terjadi kesalahan saat memuat daftar promo.
-          </p>
-        </header>
-
-        <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2">
-          <p className="text-xs md:text-sm text-red-700">{error}</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="inline-flex px-4 py-2 rounded-full border border-slate-200 text-xs md:text-sm text-slate-700 hover:bg-slate-50"
-        >
-          Coba lagi
-        </button>
-      </section>
-    );
-  }
-
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">

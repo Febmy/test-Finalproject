@@ -4,31 +4,28 @@ import api from "../../lib/api.js";
 import ActivityCard from "../../components/activity/ActivityCard.jsx";
 import { formatCurrency } from "../../lib/format.js";
 import { getFriendlyErrorMessage } from "../../lib/errors.js";
+import { Search, Filter, TrendingUp } from "lucide-react";
 
 export default function ActivityList() {
   const [activities, setActivities] = useState([]);
   const [promos, setPromos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all"); // all | budget | premium
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError("");
-
         const [actRes, promoRes] = await Promise.all([
           api.get("/activities"),
           api.get("/promos"),
         ]);
-
         setActivities(actRes.data?.data || []);
         setPromos(promoRes.data?.data || []);
       } catch (err) {
-        console.error("Activities error:", err.response?.data || err.message);
         const msg = getFriendlyErrorMessage(
           err,
           "Gagal memuat daftar aktivitas dan promo."
@@ -38,215 +35,174 @@ export default function ActivityList() {
         setLoading(false);
       }
     };
-
     load();
   }, []);
 
   const filteredActivities = activities.filter((act) => {
     const q = search.trim().toLowerCase();
-
     const matchesSearch =
       !q ||
       act.title?.toLowerCase().includes(q) ||
       act.location?.toLowerCase().includes(q);
-
     const price = act.price || 0;
     let matchesFilter = true;
-
-    if (filter === "budget") {
-      matchesFilter = price <= 500_000;
-    } else if (filter === "premium") {
-      matchesFilter = price > 500_000;
-    }
-
+    if (filter === "budget") matchesFilter = price <= 500_000;
+    else if (filter === "premium") matchesFilter = price > 500_000;
     return matchesSearch && matchesFilter;
   });
 
-  if (error) {
+  if (loading)
     return (
-      <section className="space-y-4">
-        <header className="space-y-1">
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-            All Activities
-          </h1>
-          <p className="text-sm text-slate-600">
-            Terjadi kesalahan saat memuat daftar aktivitas.
-          </p>
-        </header>
-
-        <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2">
-          <p className="text-xs md:text-sm text-red-700">{error}</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="inline-flex px-4 py-2 rounded-full border border-slate-200 text-xs md:text-sm text-slate-700 hover:bg-slate-50"
-        >
-          Coba lagi
-        </button>
-      </section>
-    );
-  }
-  
-  // === LOADING ===
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-4">
-        <div className="h-5 w-24 bg-slate-200 rounded-full animate-pulse" />
-        <div className="h-7 w-64 bg-slate-200 rounded-full animate-pulse" />
-        <div className="h-4 w-80 bg-slate-200 rounded-full animate-pulse" />
-        <div className="h-4 w-48 bg-slate-200 rounded-full animate-pulse" />
-        <div className="space-y-3 mt-4">
-          <div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
-          <div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
-          <div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 py-10 space-y-8">
+          <div className="h-10 w-64 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-64 bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl animate-pulse"
+              />
+            ))}
+          </div>
         </div>
       </div>
     );
-  }
 
-  // === ERROR ===
-  if (error) {
+  if (error)
     return (
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-3">
-        <header className="space-y-1">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
-            Activities
-          </p>
-          <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-            Temukan aktivitas untuk perjalananmu
-          </h1>
-        </header>
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-8 max-w-md">
+            <p className="text-red-700">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
-  }
 
-  // === NORMAL UI ===
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-6">
-      {/* HEADER */}
-      <header className="space-y-2">
-        <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
-          Activities
-        </p>
-        <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
-          Temukan aktivitas untuk perjalananmu
-        </h1>
-        <p className="text-sm md:text-base text-slate-600">
-          Jelajahi berbagai aktivitas dan promo yang tersedia.
-        </p>
-        <p className="text-xs text-slate-500">
-          Menampilkan{" "}
-          <span className="font-semibold">{filteredActivities.length}</span>{" "}
-          dari <span className="font-semibold">{activities.length}</span>{" "}
-          aktivitas.
-        </p>
-      </header>
-
-      {/* PROMO STRIP */}
-      {promos.length > 0 && (
-        <section className="bg-slate-900 text-white rounded-3xl p-4 md:p-5 space-y-3">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-slate-300">
-            Promo
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-10">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Discover Amazing Activities
+          </h1>
+          <p className="text-blue-700 mt-4 max-w-2xl mx-auto">
+            Explore various activities and promos available for your next
+            adventure.
           </p>
-          <div className="flex gap-3 overflow-x-auto scrollbar-none">
-            {promos.slice(0, 4).map((promo) => {
-              const code = promo.promo_code || promo.promoCode;
-              const min = promo.minimum_claim_price ?? promo.minimumClaimPrice;
-              const discount =
-                promo.promo_discount_price ?? promo.promoDiscountPrice;
+          <p className="text-blue-500 mt-2">
+            Showing{" "}
+            <span className="font-bold">{filteredActivities.length}</span> of{" "}
+            <span className="font-bold">{activities.length}</span> activities
+          </p>
+        </div>
 
-              return (
+        {/* Promo Strip */}
+        {promos.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-3xl p-6 mb-8 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <TrendingUp className="h-6 w-6" />
+                <h2 className="text-xl font-bold">Hot Promos</h2>
+              </div>
+              <span className="bg-white/20 px-4 py-1 rounded-full text-sm">
+                {promos.length} available
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {promos.slice(0, 4).map((promo) => (
                 <div
                   key={promo.id}
-                  className="min-w-[220px] bg-slate-800/70 rounded-2xl p-3 border border-slate-700"
+                  className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20"
                 >
-                  <p className="text-xs font-semibold line-clamp-2">
+                  <h3 className="font-bold text-lg">
                     {promo.title || promo.name}
-                  </p>
-
-                  {code && (
-                    <p className="mt-2 inline-flex items-center rounded-full bg-slate-100 text-slate-900 text-[10px] px-2 py-0.5">
-                      Code: {code}
+                  </h3>
+                  {promo.promo_code && (
+                    <p className="text-sm mt-2">
+                      Code:{" "}
+                      <span className="font-mono bg-white/20 px-2 py-1 rounded">
+                        {promo.promo_code}
+                      </span>
                     </p>
                   )}
-
-                  <p className="mt-1 text-[11px] text-slate-300">
-                    Min. transaksi: {min ? formatCurrency(min) : "-"}
-                    <br />
-                    Potongan: {discount ? formatCurrency(discount) : "-"}
+                  <p className="text-sm mt-2">
+                    Min:{" "}
+                    {formatCurrency(
+                      promo.minimum_claim_price ?? promo.minimumClaimPrice
+                    )}
+                  </p>
+                  <p className="text-sm">
+                    Discount:{" "}
+                    {formatCurrency(
+                      promo.promo_discount_price ?? promo.promoDiscountPrice
+                    )}
                   </p>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </section>
-      )}
+        )}
 
-      {/* FILTER BAR */}
-      <section className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
-        <div className="flex items-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 rounded-full border text-xs md:text-sm ${
-              filter === "all"
-                ? "bg-slate-900 text-white border-slate-900"
-                : "border-slate-200 text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            Semua
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("budget")}
-            className={`px-3 py-1.5 rounded-full border text-xs md:text-sm ${
-              filter === "budget"
-                ? "bg-slate-900 text-white border-slate-900"
-                : "border-slate-200 text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            Budget (&le; 500K)
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("premium")}
-            className={`px-3 py-1.5 rounded-full border text-xs md:text-sm ${
-              filter === "premium"
-                ? "bg-slate-900 text-white border-slate-900"
-                : "border-slate-200 text-slate-700 hover:bg-slate-100"
-            }`}
-          >
-            Premium (&gt; 500K)
-          </button>
+        {/* Filter Bar */}
+        <div className="bg-white rounded-2xl p-4 mb-8 shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
+              {["all", "budget", "premium"].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setFilter(type)}
+                  className={`px-4 py-2 rounded-full font-medium transition ${
+                    filter === type
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                      : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  }`}
+                >
+                  {type === "all"
+                    ? "All Activities"
+                    : type === "budget"
+                    ? "Budget (≤500K)"
+                    : "Premium (>500K)"}
+                </button>
+              ))}
+            </div>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search activities or locations..."
+                className="pl-12 pr-4 py-3 w-full md:w-80 rounded-full border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="w-full md:w-64 flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1.5">
-          <span className="text-slate-400 text-xs">🔍</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari aktivitas atau lokasi..."
-            className="flex-1 bg-transparent text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-          />
+        {/* Activities Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredActivities.map((act) => (
+            <ActivityCard key={act.id} activity={act} />
+          ))}
         </div>
-      </section>
-
-      {/* LIST AKTIVITAS */}
-      <section className="space-y-3">
-        {filteredActivities.map((act) => (
-          <ActivityCard key={act.id} activity={act} />
-        ))}
 
         {filteredActivities.length === 0 && (
-          <p className="text-sm text-slate-500">
-            Tidak ada aktivitas yang cocok dengan pencarianmu.
-          </p>
+          <div className="text-center py-12">
+            <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-700">
+              No activities found
+            </h3>
+            <p className="text-gray-500">Try adjusting your search or filter</p>
+          </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

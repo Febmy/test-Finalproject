@@ -38,6 +38,9 @@ export default function Register() {
   const [profilePictureUrl, setProfilePictureUrl] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordRepeat, setShowPasswordRepeat] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -96,6 +99,14 @@ export default function Register() {
     setPasswordRepeatError(prErr);
 
     if (nErr || eErr || phErr || pwErr || prErr) return;
+
+    if (!agreeToTerms) {
+      showToast({
+        type: "error",
+        message: "Harus menyetujui Syarat & Ketentuan.",
+      });
+      return;
+    }
 
     try {
       setLoading(true);
@@ -163,6 +174,8 @@ export default function Register() {
                 }`}
                 placeholder="Your full name"
                 autoComplete="name"
+                autoCapitalize="words"
+                autoCorrect="off"
               />
               {nameError && (
                 <p className="mt-1 text-xs text-red-600">{nameError}</p>
@@ -218,20 +231,30 @@ export default function Register() {
               <label className="block text-xs font-medium text-slate-700">
                 Password
               </label>
-              <input
-                value={password}
-                onChange={(e) => onPassword(e.target.value)}
-                onBlur={(e) =>
-                  setPasswordError(validatePassword(e.target.value))
-                }
-                className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none ${
-                  passwordError
-                    ? "border border-red-400 ring-1 ring-red-200"
-                    : "border border-slate-200 focus:ring-2 focus:ring-teal-500"
-                }`}
-                placeholder="••••••••"
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  value={password}
+                  onChange={(e) => onPassword(e.target.value)}
+                  onBlur={(e) =>
+                    setPasswordError(validatePassword(e.target.value))
+                  }
+                  type={showPassword ? "text" : "password"}
+                  className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none pr-10 ${
+                    passwordError
+                      ? "border border-red-400 ring-1 ring-red-200"
+                      : "border border-slate-200 focus:ring-2 focus:ring-teal-500"
+                  }`}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
               {passwordError && (
                 <p className="mt-1 text-xs text-red-600">{passwordError}</p>
               )}
@@ -242,27 +265,67 @@ export default function Register() {
               <label className="block text-xs font-medium text-slate-700">
                 Confirm Password
               </label>
-              <input
-                value={passwordRepeat}
-                onChange={(e) => onPasswordRepeat(e.target.value)}
-                onBlur={(e) =>
-                  setPasswordRepeatError(
-                    validatePasswordMatch(password, e.target.value)
-                  )
-                }
-                className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none ${
-                  passwordRepeatError
-                    ? "border border-red-400 ring-1 ring-red-200"
-                    : "border border-slate-200 focus:ring-2 focus:ring-teal-500"
-                }`}
-                placeholder="Ulangi password"
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <input
+                  value={passwordRepeat}
+                  onChange={(e) => onPasswordRepeat(e.target.value)}
+                  onBlur={(e) =>
+                    setPasswordRepeatError(
+                      validatePasswordMatch(password, e.target.value)
+                    )
+                  }
+                  type={showPasswordRepeat ? "text" : "password"}
+                  className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none pr-10 ${
+                    passwordRepeatError
+                      ? "border border-red-400 ring-1 ring-red-200"
+                      : "border border-slate-200 focus:ring-2 focus:ring-teal-500"
+                  }`}
+                  placeholder="Ulangi password"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordRepeat(!showPasswordRepeat)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPasswordRepeat ? "🙈" : "👁️"}
+                </button>
+              </div>
               {passwordRepeatError && (
                 <p className="mt-1 text-xs text-red-600">
                   {passwordRepeatError}
                 </p>
               )}
+            </div>
+
+            {/* TERMS & CONDITIONS */}
+            <div className="pt-2">
+              <label className="flex items-start gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={agreeToTerms}
+                  onChange={(e) => setAgreeToTerms(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Saya setuju dengan{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/terms")}
+                    className="text-teal-600 hover:underline"
+                  >
+                    Syarat & Ketentuan
+                  </button>{" "}
+                  dan{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/privacy")}
+                    className="text-teal-600 hover:underline"
+                  >
+                    Kebijakan Privasi
+                  </button>
+                </span>
+              </label>
             </div>
 
             <button

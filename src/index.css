@@ -1,12 +1,65 @@
 @import "tailwindcss";
 
+/* === VARIABEL WARNA DARI LOGIN PAGE === */
+:root {
+  --color-primary: #3a0ca3;
+  --color-secondary: #4361ee;
+  --color-accent: #4cc9f0;
+  --color-teal: #06d6a0;
+  --color-dark: #1a1a2e;
+  --color-light: #f8f9fa;
+  --gradient-primary: linear-gradient(135deg, #4361ee, #3a0ca3);
+  --gradient-dark: linear-gradient(135deg, #3a0ca3, #1a1a2e);
+  --gradient-teal: linear-gradient(135deg, #06d6a0, #4cc9f0);
+  --gradient-login: linear-gradient(
+    135deg,
+    #0d9488 0%,
+    #1d4ed8 50%,
+    #5b21b6 100%
+  );
+}
+
+/* === GLOBAL STYLES === */
+body {
+  background: linear-gradient(135deg, #f0f9ff 0%, #f0f4ff 100%);
+  min-height: 100vh;
+}
+
+/* === COMPONENT STYLES === */
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(67, 97, 238, 0.3);
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+}
+
 /* === MARQUEE BRANDS TRAVEL BEE === */
 @keyframes scroll-marquee {
   0% {
     transform: translateX(0);
   }
   100% {
-    /* geser ke kiri, cukup 50% karena kita duplikat list brand */
     transform: translateX(-50%);
   }
 }

@@ -5,22 +5,19 @@ import api from "../../lib/api.js";
 import { formatCurrency } from "../../lib/format.js";
 import { getFriendlyErrorMessage } from "../../lib/errors.js";
 import ActivityCard from "../../components/activity/ActivityCard.jsx";
+import {
+  Search,
+  Star,
+  Shield,
+  Clock,
+  TrendingUp,
+  ArrowRight,
+} from "lucide-react";
 
-// ===== HELPER GAMBAR =====
 const FALLBACK_ACTIVITY_IMAGE =
-  "https://images.pexels.com/photos/1001965/pexels-photo-1001965.jpeg?auto=compress&cs=tinysrgb&w=1200";
-
+  "https://images.pexels.com/photos/1001965/pexels-photo-1001965.jpeg";
 const FALLBACK_PROMO_IMAGE =
-  "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1200";
-
-function getActivityImage(act) {
-  return (
-    act?.imageUrl ||
-    (Array.isArray(act?.imageUrls) && act.imageUrls[0]) ||
-    act?.thumbnail ||
-    FALLBACK_ACTIVITY_IMAGE
-  );
-}
+  "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg";
 
 export default function Home() {
   const [promos, setPromos] = useState([]);
@@ -28,7 +25,7 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [popularCount, setPopularCount] = useState(6); // jumlah awal kartu popular
+  const [popularCount, setPopularCount] = useState(6);
 
   const navigate = useNavigate();
 
@@ -36,18 +33,15 @@ export default function Home() {
     try {
       setLoading(true);
       setError("");
-
       const [pRes, aRes, cRes] = await Promise.all([
         api.get("/promos"),
         api.get("/activities?limit=12"),
         api.get("/categories"),
       ]);
-
       setPromos(pRes.data?.data || []);
       setActivities(aRes.data?.data || []);
       setCategories(cRes.data?.data || []);
     } catch (err) {
-      console.error("Homepage error:", err.response?.data || err.message);
       const msg = getFriendlyErrorMessage(err, "Gagal memuat data homepage.");
       setError(msg);
     } finally {
@@ -57,634 +51,246 @@ export default function Home() {
 
   useEffect(() => {
     loadHomepage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ===== DATA TURUNAN =====
-  const heroPromo = promos[0] || null;
-
-  const heroImage =
-    heroPromo?.imageUrl ||
-    (Array.isArray(heroPromo?.imageUrls) && heroPromo.imageUrls[0]) ||
-    FALLBACK_PROMO_IMAGE;
-
-  const heroPromoCode = heroPromo?.promo_code;
-  const heroMinPrice = heroPromo?.minimum_claim_price;
-  const heroDiscount = heroPromo?.promo_discount_price;
-
-  const recommendedActivities = activities.slice(0, 4);
-  const maxPopular = Math.min(activities.length, 12);
-  const popularActivities = activities.slice(
-    0,
-    Math.min(popularCount, maxPopular || 0)
-  );
-  const topCategories = categories.slice(0, 6);
-  const latestPromos = promos.slice(0, 3);
-
-  // ===== STATE: LOADING & ERROR =====
-  if (loading) {
+  if (loading)
     return (
-      <div className="min-h-screen bg-slate-50 overflow-x-hidden">
-        <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
-          <div className="h-52 md:h-64 rounded-3xl bg-slate-200 animate-pulse" />
-          <div className="h-32 rounded-3xl bg-slate-200 animate-pulse" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 py-10 space-y-8">
+          <div className="h-52 md:h-64 rounded-3xl bg-gradient-to-r from-blue-100 to-purple-100 animate-pulse" />
+          <div className="h-32 rounded-3xl bg-gradient-to-r from-teal-100 to-blue-100 animate-pulse" />
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="h-40 rounded-2xl bg-slate-200 animate-pulse" />
-            <div className="h-40 rounded-2xl bg-slate-200 animate-pulse" />
-            <div className="h-40 rounded-2xl bg-slate-200 animate-pulse" />
+            <div className="h-40 rounded-2xl bg-gradient-to-r from-blue-100 to-teal-100 animate-pulse" />
+            <div className="h-40 rounded-2xl bg-gradient-to-r from-purple-100 to-pink-100 animate-pulse" />
+            <div className="h-40 rounded-2xl bg-gradient-to-r from-teal-100 to-blue-100 animate-pulse" />
           </div>
         </div>
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
-      <div className="min-h-screen bg-slate-50 overflow-x-hidden">
-        <div className="max-w-6xl mx-auto px-4 py-10 space-y-4">
-          <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-3">
-            <p className="text-xs md:text-sm text-red-700">{error}</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 py-10 space-y-4">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+            <p className="text-red-700">{error}</p>
           </div>
           <button
-            type="button"
             onClick={loadHomepage}
-            className="inline-flex px-4 py-2 rounded-full border border-slate-200 text-xs md:text-sm text-slate-700 hover:bg-slate-50"
+            className="px-4 py-2 rounded-full bg-gradient-to-r from-teal-600 to-blue-600 text-white"
           >
             Coba lagi
           </button>
         </div>
       </div>
     );
-  }
 
-  // ===== UI =====
   return (
-    <div className="min-h-screen bg-slate-50 overflow-x-hidden">
-      <div className="max-w-6xl mx-auto px-4 py-10 space-y-16">
-        {/* =============== HERO + PROMO =============== */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 py-10 space-y-16">
+        {/* Hero Section */}
         <section className="space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] uppercase tracking-[0.18em] text-slate-500 shadow-sm">
-            TravelApp
-            <span className="w-1 h-1 rounded-full bg-slate-400" />
-            Smart Travel Companion
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-blue-200 text-sm">
+            <span className="font-semibold text-blue-700">TravelApp</span>
+            <span className="text-blue-400">•</span>
+            <span className="text-blue-600">Smart Travel Companion</span>
           </div>
 
-          <div className="space-y-3">
-            <h1 className="text-3xl md:text-4xl lg:text-[2.6rem] font-bold leading-tight text-slate-900">
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Visit The Most{" "}
-              <span className="text-sky-600">Beautiful Places</span> In The
+              <span className="text-teal-600">Beautiful Places</span> In The
               World
             </h1>
-            <p className="text-sm md:text-base text-slate-600 max-w-xl">
+            <p className="text-lg text-blue-700 max-w-2xl">
               Plan and book your perfect trip with expert advice, destination
               information, and special promos from Travel Journal API.
             </p>
           </div>
 
-          {heroPromo ? (
-            <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 overflow-hidden">
-              <div className="p-5 md:p-6 space-y-3">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
-                  Promo
-                </p>
-                <h2 className="text-lg md:text-xl font-semibold text-slate-900">
-                  {heroPromo.title}
-                </h2>
-
-                {heroPromo.description && (
-                  <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-                    {heroPromo.description}
-                  </p>
-                )}
-
-                {/* Tag kode + min transaksi + diskon */}
-                <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
-                  {heroPromoCode && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-900 text-white font-mono">
-                      Kode: {heroPromoCode}
-                    </span>
-                  )}
-                  {heroMinPrice && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-                      Min. Transaksi {formatCurrency(heroMinPrice)}
-                    </span>
-                  )}
-                  {heroDiscount && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700">
-                      Diskon {formatCurrency(heroDiscount)}
-                    </span>
-                  )}
-                </div>
-
-                {/* CTA */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/activity")}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-slate-900 text-white text-xs md:text-sm font-medium hover:bg-slate-800"
-                  >
-                    Lihat aktivitas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/promos")}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-slate-200 text-slate-700 text-xs md:text-sm hover:bg-slate-50"
-                  >
-                    Lihat semua promo
-                  </button>
+          {/* Hero Promo Card */}
+          {promos[0] && (
+            <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-3xl overflow-hidden shadow-2xl">
+              <div className="p-8 md:p-10 text-white">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+                  <div className="flex-1">
+                    <p className="text-blue-200 text-sm uppercase tracking-widest mb-2">
+                      Exclusive Promo
+                    </p>
+                    <h2 className="text-2xl md:text-3xl font-bold mb-4">
+                      {promos[0].title}
+                    </h2>
+                    <p className="text-blue-100 mb-6">
+                      {promos[0].description ||
+                        "Special discount for your next adventure"}
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
+                        Code: {promos[0].promo_code}
+                      </span>
+                      <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
+                        Discount:{" "}
+                        {formatCurrency(promos[0].promo_discount_price)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <img
+                      src={promos[0].imageUrl || FALLBACK_PROMO_IMAGE}
+                      alt={promos[0].title}
+                      className="rounded-2xl shadow-lg"
+                    />
+                  </div>
                 </div>
               </div>
-
-              {/* Gambar besar di bawah */}
-              <div className="relative w-full pt-[50%] bg-slate-100">
-                <img
-                  src={heroImage}
-                  alt={heroPromo.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = FALLBACK_PROMO_IMAGE;
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            // fallback kalau belum ada promo
-            <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/60 border border-slate-100 p-5 md:p-6">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">
-                Promo
-              </p>
-              <p className="text-xs md:text-sm text-slate-500">
-                Belum ada promo yang aktif. Coba lagi nanti ya ✈️
-              </p>
             </div>
           )}
         </section>
 
-        {/* =============== QUICK ACTIONS (ACTIVITY / CART / TRANSACTIONS / PROMOS) =============== */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <Link
-            to="/activity"
-            className="group bg-white rounded-2xl border border-slate-200 p-3 md:p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-          >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-              Activities
-            </p>
-            <p className="mt-1 text-sm md:text-base font-semibold text-slate-900">
-              Cari aktivitas
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Lihat semua aktivitas yang tersedia.
-            </p>
-          </Link>
-
-          <Link
-            to="/cart"
-            className="group bg-white rounded-2xl border border-slate-200 p-3 md:p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-          >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-              Cart
-            </p>
-            <p className="mt-1 text-sm md:text-base font-semibold text-slate-900">
-              Lanjutkan pesanan
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Review keranjang dan lanjut ke pembayaran.
-            </p>
-          </Link>
-
-          <Link
-            to="/transactions"
-            className="group bg-white rounded-2xl border border-slate-200 p-3 md:p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-          >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-              Transactions
-            </p>
-            <p className="mt-1 text-sm md:text-base font-semibold text-slate-900">
-              Riwayat perjalanan
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Cek status dan detail pembayaranmu.
-            </p>
-          </Link>
-
-          <Link
-            to="/promos"
-            className="group bg-white rounded-2xl border border-slate-200 p-3 md:p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-          >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-              Promos
-            </p>
-            <p className="mt-1 text-sm md:text-base font-semibold text-slate-900">
-              Lihat promo
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Gunakan kode promo sebelum checkout.
-            </p>
-          </Link>
+        {/* Quick Actions */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              icon: <Search className="h-6 w-6" />,
+              title: "Activities",
+              desc: "Explore amazing destinations",
+              to: "/activity",
+              color: "from-blue-500 to-teal-500",
+            },
+            {
+              icon: <Star className="h-6 w-6" />,
+              title: "Promos",
+              desc: "Best deals & discounts",
+              to: "/promos",
+              color: "from-purple-500 to-pink-500",
+            },
+            {
+              icon: <Shield className="h-6 w-6" />,
+              title: "Secure Booking",
+              desc: "Safe & reliable transactions",
+              to: "/transactions",
+              color: "from-teal-500 to-blue-500",
+            },
+            {
+              icon: <Clock className="h-6 w-6" />,
+              title: "Fast Support",
+              desc: "24/7 customer service",
+              to: "/help-center",
+              color: "from-blue-500 to-purple-500",
+            },
+          ].map((item, idx) => (
+            <Link
+              key={idx}
+              to={item.to}
+              className={`bg-gradient-to-r ${item.color} text-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2`}
+            >
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 p-3 rounded-xl">{item.icon}</div>
+                <div>
+                  <h3 className="text-xl font-bold">{item.title}</h3>
+                  <p className="text-blue-100">{item.desc}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </section>
 
-        {/* =============== MARQUEE =============== */}
-        <section className="border-y bg-white" aria-label="Brands">
-          <div className="overflow-hidden">
-            <div className="flex gap-12 py-6 whitespace-nowrap brands-marquee">
-              {[
-                "INDONESIA",
-                "JEPANG",
-                "KOREA",
-                "CHINA",
-                "THAILAND",
-                "FRANCE",
-                "BALI",
-                "EUROPE",
-              ].map((b, i) => (
-                <span
-                  key={i}
-                  className="text-gray-500 text-sm tracking-widest uppercase"
-                >
-                  {b}
-                </span>
-              ))}
-              {[
-                "INDONESIA",
-                "JEPANG",
-                "KOREA",
-                "CHINA",
-                "THAILAND",
-                "FRANCE",
-                "BALI",
-                "EUROPE",
-              ].map((b, i) => (
-                <span
-                  key={"d-" + i}
-                  className="text-gray-500 text-sm tracking-widest uppercase"
-                >
-                  {b}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* =============== WHY CHOOSE US =============== */}
-        <section id="features" className="space-y-8">
-          <div className="text-center space-y-3">
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-              Why travel with TravelApp?
+        {/* Features */}
+        <section className="bg-white rounded-3xl p-8 shadow-xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Why Choose TravelApp?
             </h2>
-            <p className="text-gray-600 text-sm md:text-base max-w-2xl mx-auto">
-              Travel smarter dengan rekomendasi destinasi, promo eksklusif, dan
-              pengalaman pemesanan yang simpel.
+            <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
+              Travel smarter with curated destinations, exclusive promos, and
+              seamless booking experience.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 title: "Curated Destinations",
-                desc: "Aktivitas pilihan yang diambil dari Travel Journal API dengan rating terbaik.",
+                desc: "Handpicked activities with top ratings",
                 icon: "🌍",
               },
               {
                 title: "Best Deals",
-                desc: "Promo menarik di berbagai kota dan negara untuk liburan lebih hemat.",
+                desc: "Exclusive discounts and promotions",
                 icon: "💸",
               },
               {
                 title: "Flexible Schedule",
-                desc: "Jadwal aktivitas yang bisa disesuaikan dengan rencana perjalananmu.",
+                desc: "Customizable travel plans",
                 icon: "📅",
               },
               {
                 title: "Secure Booking",
-                desc: "Transaksi aman dan transparan, seluruh data diambil langsung dari API.",
+                desc: "Safe and transparent transactions",
                 icon: "🔒",
               },
             ].map((f, idx) => (
               <div
                 key={idx}
-                className="rounded-2xl border bg-white p-5 flex flex-col gap-2 shadow-sm"
+                className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100 hover:border-blue-300 transition"
               >
-                <div className="text-2xl">{f.icon}</div>
-                <h3 className="mt-1 font-semibold text-slate-900">{f.title}</h3>
-                <p className="text-sm text-gray-600 mt-1">{f.desc}</p>
+                <div className="text-3xl mb-4">{f.icon}</div>
+                <h3 className="font-bold text-lg text-blue-900">{f.title}</h3>
+                <p className="text-blue-700 mt-2">{f.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* =============== CATEGORIES =============== */}
-        <section id="categories" className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg md:text-xl font-semibold text-slate-900">
-                Categories
-              </h2>
-              <p className="text-xs md:text-sm text-slate-500">
-                Here are lots of interesting destinations grouped by category.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate("/activity")}
-              className="text-xs md:text-sm text-sky-600 hover:text-sky-700"
-            >
-              Explore all
-            </button>
-          </div>
-
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {(topCategories.length
-              ? topCategories
-              : [
-                  { id: "1", name: "Beach" },
-                  { id: "2", name: "Mountain" },
-                  { id: "3", name: "City" },
-                ]
-            ).map((cat, idx) => (
-              <div
-                key={cat.id || idx}
-                className="shrink-0 w-24 md:w-28 flex flex-col items-center gap-2"
-              >
-                <div className="w-24 h-28 md:w-28 md:h-32 rounded-[2rem] overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
-                  <img
-                    src={
-                      cat.imageUrl ||
-                      "https://images.pexels.com/photos/346885/pexels-photo-346885.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                    }
-                    alt={cat.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        "https://images.pexels.com/photos/346885/pexels-photo-346885.jpeg?auto=compress&cs=tinysrgb&w=1200";
-                    }}
-                  />
-                </div>
-                <p className="text-xs md:text-sm font-medium text-slate-700">
-                  {cat.name}
+        {/* Popular Activities */}
+        {activities.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-blue-900">
+                  Popular Destinations
+                </h2>
+                <p className="text-blue-700">
+                  Top picks from Travel Journal API
                 </p>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* =============== REKOMENDASI UNTUKMU =============== */}
-        {recommendedActivities.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg md:text-xl font-semibold text-slate-900">
-                Rekomendasi untukmu
-              </h2>
               <button
-                type="button"
                 onClick={() => navigate("/activity")}
-                className="text-[11px] md:text-xs text-slate-500 hover:text-slate-700"
+                className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
               >
-                Lihat semua aktivitas →
+                <span>View All</span>
+                <ArrowRight className="h-4 w-4" />
               </button>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
-              {recommendedActivities.map((act) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activities.slice(0, popularCount).map((act) => (
                 <ActivityCard key={act.id} activity={act} />
               ))}
             </div>
           </section>
         )}
 
-        {/* =============== POPULAR DESTINATIONS (+ / -) =============== */}
-        <section id="popular" className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg md:text-xl font-semibold text-slate-900">
-                Popular Destinations
-              </h2>
-              <p className="text-xs md:text-sm text-slate-500">
-                Spot terbaik dari Travel Journal API yang bisa kamu pesan.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPopularCount((prev) => Math.max(3, prev - 3))}
-                disabled={popularActivities.length <= 3}
-                className={`w-7 h-7 rounded-full border text-xs ${
-                  popularActivities.length <= 3
-                    ? "border-slate-200 text-slate-300 cursor-not-allowed"
-                    : "border-slate-200 text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                -
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setPopularCount((prev) => Math.min(maxPopular, prev + 3))
-                }
-                disabled={popularActivities.length >= maxPopular}
-                className={`w-7 h-7 rounded-full text-xs ${
-                  popularActivities.length >= maxPopular
-                    ? "bg-sky-200 text-white cursor-not-allowed"
-                    : "bg-sky-600 text-white hover:bg-sky-700"
-                }`}
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {popularActivities.length === 0 ? (
-            <p className="text-sm text-slate-500">
-              Belum ada aktivitas yang tersedia.
-            </p>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {popularActivities.map((act) => (
-                <div
-                  key={act.id}
-                  className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition flex flex-col overflow-hidden"
-                >
-                  <div className="h-40 bg-slate-100 overflow-hidden">
-                    <img
-                      src={getActivityImage(act)}
-                      alt={act.title}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = FALLBACK_ACTIVITY_IMAGE;
-                      }}
-                    />
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm md:text-base font-semibold text-slate-900 line-clamp-2">
-                        {act.title}
-                      </h3>
-                      <p className="mt-1 text-xs text-slate-500 line-clamp-2">
-                        {act.description ||
-                          "Exciting experience for your next trip."}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-sm md:text-base font-semibold text-slate-900">
-                        {formatCurrency(act.price || 0)}
-                      </p>
-                      <Link
-                        to={`/activity/${act.id}`}
-                        className="text-xs md:text-sm px-3 py-1.5 rounded-full bg-sky-600 text-white hover:bg-sky-700"
-                      >
-                        Book Now
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* =============== PROMO TERBARU =============== */}
-        {latestPromos.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg md:text-xl font-semibold text-slate-900">
-                Promo terbaru
-              </h2>
-              <Link
-                to="/promos"
-                className="text-[11px] md:text-xs text-slate-500 hover:text-slate-700"
-              >
-                Lihat semua promo →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {latestPromos.map((promo) => {
-                const img =
-                  promo.imageUrl ||
-                  (Array.isArray(promo.imageUrls) && promo.imageUrls[0]) ||
-                  FALLBACK_PROMO_IMAGE;
-
-                return (
-                  <article
-                    key={promo.id}
-                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col"
-                  >
-                    <div className="h-32 bg-slate-100 overflow-hidden">
-                      <img
-                        src={img}
-                        alt={promo.title || "Promo"}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = FALLBACK_PROMO_IMAGE;
-                        }}
-                      />
-                    </div>
-                    <div className="p-3 flex-1 flex flex-col gap-1">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                        Promo
-                      </p>
-                      <h3 className="text-sm font-semibold text-slate-900 line-clamp-2">
-                        {promo.title || "Travel promo"}
-                      </h3>
-                      {promo.description && (
-                        <p className="text-[11px] text-slate-500 line-clamp-2">
-                          {promo.description}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
-                        {promo.promo_code && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-900 text-white">
-                            {promo.promo_code}
-                          </span>
-                        )}
-                        {promo.promo_discount_price && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                            Diskon {formatCurrency(promo.promo_discount_price)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* =============== FEATURE BLOCKS (BOOK CAR / BOOK HOTEL) =============== */}
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-6 shadow-sm flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-slate-900">Book Car</h3>
-            <p className="text-xs md:text-sm text-slate-500">
-              Rencanakan perjalanan lebih fleksibel dengan menyewa mobil di
-              destinasi pilihanmu.
-            </p>
+        {/* CTA Section */}
+        <section className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-3xl p-10 text-center text-white">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Ready for Your Next Adventure?
+          </h2>
+          <p className="text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of travelers who trust TravelApp for their journey
+            planning.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              type="button"
               onClick={() => navigate("/activity")}
-              className="mt-auto inline-flex items-center gap-1 text-xs md:text-sm text-sky-600 hover:text-sky-700"
+              className="bg-white text-blue-700 px-8 py-3 rounded-full font-bold hover:bg-blue-50 transition"
             >
-              Explore more <span aria-hidden="true">↗</span>
+              Explore Activities
             </button>
-          </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-6 shadow-sm flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-slate-900">Book Hotel</h3>
-            <p className="text-xs md:text-sm text-slate-500">
-              Temukan penginapan yang nyaman dekat dengan aktivitas yang kamu
-              pesan.
-            </p>
             <button
-              type="button"
-              onClick={() => navigate("/activity")}
-              className="mt-auto inline-flex items-center gap-1 text-xs md:text-sm text-sky-600 hover:text-sky-700"
+              onClick={() => navigate("/register")}
+              className="bg-transparent border-2 border-white px-8 py-3 rounded-full font-bold hover:bg-white/10 transition"
             >
-              Explore more <span aria-hidden="true">↗</span>
+              Create Account
             </button>
-          </div>
-        </section>
-
-        {/* =============== CLIENT REVIEW =============== */}
-        <section
-          id="review"
-          className="grid gap-6 md:grid-cols-[1.1fr,1.2fr] items-center"
-        >
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-6 shadow-sm flex items-center gap-4">
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-slate-200 overflow-hidden">
-              <img
-                src="https://images.pexels.com/photos/3760853/pexels-photo-3760853.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                alt="Happy traveler"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Client Review
-              </h3>
-              <p className="mt-1 text-xs md:text-sm text-slate-500">
-                “TravelApp membantu saya menemukan aktivitas dan promo yang pas,
-                tanpa perlu buka banyak website.”
-              </p>
-              <p className="mt-2 text-[11px] text-slate-500">
-                — Febmy, TravelApp user
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-sky-50 rounded-3xl border border-sky-100 p-5 md:p-6 shadow-sm">
-            <div className="text-3xl text-sky-500 mb-2">“</div>
-            <p className="text-xs md:text-sm text-slate-700">
-              Dengan mengerjakan final project ini, saya belajar bagaimana
-              menghubungkan React app dengan API nyata, mengelola state untuk
-              user dan admin, serta membuat UI yang responsif dan enak
-              digunakan.
-            </p>
           </div>
         </section>
       </div>

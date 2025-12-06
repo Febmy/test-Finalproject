@@ -1,22 +1,32 @@
-// src/components/AdminLayout.jsx
+// src/components/layout/AdminLayout.jsx
 import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useToast } from "../../context/ToastContext.jsx";
 
+// Helper ambil user profile
+function getUser() {
+  try {
+    const raw = localStorage.getItem("userProfile");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+const adminMenu = [
+  { to: "/admin", label: "Dashboard" },
+  { to: "/admin/transactions", label: "Transaksi" },
+  { to: "/admin/users", label: "Users" },
+  { to: "/admin/activities", label: "Activities" },
+  { to: "/admin/promos", label: "Promos & Banner" },
+  { to: "/admin/banners", label: "Banners" }, // ← Tambah ini
+  { to: "/admin/payment-methods", label: "Payment Methods" }, // ← Tambah ini
+];
+
 export default function AdminLayout({ title, children }) {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    const raw = localStorage.getItem("userProfile");
-    if (!raw) return;
-    try {
-      setUser(JSON.parse(raw));
-    } catch {
-      setUser(null);
-    }
-  }, []);
+  const [user, setUser] = useState(getUser());
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -25,17 +35,9 @@ export default function AdminLayout({ title, children }) {
     navigate("/login");
   };
 
-  const menu = [
-    { to: "/admin", label: "Dashboard" },
-    { to: "/admin/transactions", label: "Transaksi" },
-    { to: "/admin/users", label: "Users" },
-    { to: "/admin/activities", label: "Activities" }, // 🔹 baru
-    { to: "/admin/promos", label: "Promos & Banner" }, // 🔹 baru
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* TOP BAR */}
+      {/* HEADER */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div>
@@ -46,36 +48,39 @@ export default function AdminLayout({ title, children }) {
               {title || "Dashboard"}
             </h1>
           </div>
+
           {user && (
             <div className="text-right text-xs text-slate-500">
               <p className="font-semibold text-slate-700">{user.name}</p>
               <p className="uppercase tracking-[0.18em] text-[10px]">
-                {user.role || "user"}
+                {user.role}
               </p>
             </div>
           )}
         </div>
       </header>
 
-      {/* CONTENT */}
+      {/* BODY */}
       <div className="max-w-6xl mx-auto px-4 py-6 grid gap-6 md:grid-cols-[220px,1fr]">
         {/* SIDEBAR */}
         <aside className="bg-white border border-slate-200 rounded-2xl p-3 h-fit">
           <nav className="space-y-1">
-            {menu.map((item) => (
+            {adminMenu.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  "block px-3 py-2 text-sm rounded-xl transition " +
-                  (isActive
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100")
+                  `block px-3 py-2 text-sm rounded-xl transition ${
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`
                 }
               >
                 {item.label}
               </NavLink>
             ))}
+
             <button
               type="button"
               onClick={handleLogout}
@@ -86,7 +91,7 @@ export default function AdminLayout({ title, children }) {
           </nav>
         </aside>
 
-        {/* MAIN CARD */}
+        {/* MAIN CONTENT */}
         <section className="bg-white border border-slate-200 rounded-2xl p-4 md:p-6 shadow-sm">
           {children}
         </section>

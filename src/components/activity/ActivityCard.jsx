@@ -2,34 +2,46 @@
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../../lib/format.js";
 
-const FALLBACK_ACTIVITY_IMAGE =
+const FALLBACK_IMAGE =
   "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
-function getImageUrl(activity) {
-  if (!activity) return FALLBACK_ACTIVITY_IMAGE;
-  if (Array.isArray(activity.imageUrls) && activity.imageUrls.length > 0) {
-    return activity.imageUrls[0];
-  }
-  if (activity.imageUrl) return activity.imageUrl;
-  if (activity.thumbnail) return activity.thumbnail;
-  return FALLBACK_ACTIVITY_IMAGE;
+const DEFAULT_RATING = 4.8;
+
+/* Helper mendapatkan gambar yang paling aman */
+function getActivityImage(activity = {}) {
+  const { imageUrl, imageUrls, thumbnail } = activity;
+  return (
+    (Array.isArray(imageUrls) && imageUrls[0]) ||
+    imageUrl ||
+    thumbnail ||
+    FALLBACK_IMAGE
+  );
 }
 
 export default function ActivityCard({ activity }) {
   if (!activity) return null;
 
-  const imageUrl = getImageUrl(activity);
-  const title = activity.title || "Activity";
-  const location = activity.location || "Flexible location";
-  const categoryName = activity.category?.name || null;
-  const price =
-    activity.price != null
-      ? formatCurrency(activity.price)
-      : "Harga belum tersedia";
+  // Destructure untuk readability
+  const {
+    id,
+    title = "Activity",
+    location = "Flexible location",
+    price,
+    category,
+    shortDescription,
+    duration = "Flexible",
+    rating,
+  } = activity;
+
+  const imageUrl = getActivityImage(activity);
+  const displayPrice =
+    price != null ? formatCurrency(price) : "Harga belum tersedia";
+  const displayRating = rating != null ? rating.toFixed(1) : DEFAULT_RATING;
+  const categoryName = category?.name || null;
 
   return (
     <Link
-      to={`/activity/${activity.id}`}
+      to={`/activity/${id}`}
       className="group block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/60 rounded-3xl"
     >
       <article className="bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col overflow-hidden">
@@ -42,7 +54,7 @@ export default function ActivityCard({ activity }) {
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = FALLBACK_ACTIVITY_IMAGE;
+              e.currentTarget.src = FALLBACK_IMAGE;
             }}
           />
 
@@ -55,7 +67,7 @@ export default function ActivityCard({ activity }) {
 
           {/* PRICE BADGE */}
           <span className="absolute bottom-3 left-3 inline-flex items-center rounded-full bg-slate-900/90 text-white text-xs px-3 py-1 shadow-sm">
-            {price}
+            {displayPrice}
           </span>
         </div>
 
@@ -70,26 +82,22 @@ export default function ActivityCard({ activity }) {
             {location}
           </p>
 
-          {activity.shortDescription && (
+          {shortDescription && (
             <p className="text-[11px] md:text-xs text-slate-500 line-clamp-2">
-              {activity.shortDescription}
+              {shortDescription}
             </p>
           )}
         </div>
 
-        {/* FOOTER: INFO KECIL */}
+        {/* FOOTER */}
         <div className="px-4 pb-3 pt-1 flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100">
           <span>
-            Durasi:{" "}
-            <span className="font-medium">
-              {activity.duration || "Flexible"}
-            </span>
+            Durasi: <span className="font-medium">{duration}</span>
           </span>
+
           <span className="inline-flex items-center gap-1">
             <span className="w-1 h-1 rounded-full bg-emerald-400" />
-            <span className="font-medium">
-              {activity.rating != null ? activity.rating.toFixed(1) : "4.8"}
-            </span>
+            <span className="font-medium">{displayRating}</span>
           </span>
         </div>
       </article>

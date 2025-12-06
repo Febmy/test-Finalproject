@@ -33,14 +33,18 @@ import AdminTransactions from "./pages/admin/AdminTransactions.jsx";
 import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminActivities from "./pages/admin/AdminActivities.jsx";
 import AdminPromos from "./pages/admin/AdminPromos.jsx";
+import AdminBanners from "./pages/admin/AdminBanners.jsx";
 
 // ================= GUARD COMPONENTS =================
 
 // Proteksi route yang butuh login
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
+  const location = useLocation();
+
   if (!token) {
-    return <Navigate to="/login" replace />;
+    // Simpan URL yang ingin diakses untuk redirect setelah login
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   return children;
 }
@@ -48,8 +52,10 @@ function RequireAuth({ children }) {
 // Proteksi route admin (butuh login + role = admin)
 function RequireAdmin({ children }) {
   const token = localStorage.getItem("token");
+  const location = useLocation();
+
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   let role = "";
@@ -64,7 +70,16 @@ function RequireAdmin({ children }) {
   }
 
   if (role !== "admin") {
-    return <Navigate to="/" replace />;
+    // Jika bukan admin, redirect ke home dengan pesan akses ditolak
+    return (
+      <Navigate
+        to="/"
+        state={{
+          error: "Akses ditolak. Hanya admin yang bisa mengakses halaman ini.",
+        }}
+        replace
+      />
+    );
   }
 
   return children;
@@ -73,13 +88,21 @@ function RequireAdmin({ children }) {
 // Blokir admin supaya tidak bisa akses halaman user
 function BlockAdminOnUserRoute({ children }) {
   const rawProfile = localStorage.getItem("userProfile");
+  const location = useLocation();
+
   if (!rawProfile) return children;
 
   try {
     const profile = JSON.parse(rawProfile);
     if (profile?.role === "admin") {
       // kalau admin coba buka halaman user, lempar ke /admin
-      return <Navigate to="/admin" replace />;
+      return (
+        <Navigate
+          to="/admin"
+          state={{ warning: "Admin tidak dapat mengakses halaman user" }}
+          replace
+        />
+      );
     }
   } catch (err) {
     console.error("Failed to parse userProfile", err);
@@ -461,7 +484,6 @@ export default function App() {
                 </BlockAdminOnUserRoute>
               }
             />
-            {/* nav-mu kemungkinan pakai /help-center, jadi di sini */}
             <Route
               path="/help-center"
               element={
@@ -470,7 +492,7 @@ export default function App() {
                 </BlockAdminOnUserRoute>
               }
             />
-            {/* alias /help -> redirect ke /help-center */}
+            {/* Redirect dari /help ke /help-center */}
             <Route
               path="/help"
               element={<Navigate to="/help-center" replace />}
@@ -524,6 +546,14 @@ export default function App() {
               element={
                 <RequireAdmin>
                   <AdminPromos />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="/admin/banners"
+              element={
+                <RequireAdmin>
+                  <AdminBanners />
                 </RequireAdmin>
               }
             />

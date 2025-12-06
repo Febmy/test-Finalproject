@@ -1,4 +1,4 @@
-// src/components/CheckoutStepper.jsx
+// src/components/ui/CheckoutStepper.jsx
 
 const STEPS = [
   { id: "cart", label: "Cart" },
@@ -6,38 +6,45 @@ const STEPS = [
   { id: "finish", label: "Finish" },
 ];
 
-export default function CheckoutStepper({ activeStep = "checkout" }) {
+export default function CheckoutStepper({
+  activeStep = "checkout",
+  onStepChange,
+}) {
+  const activeIndex = STEPS.findIndex((s) => s.id === activeStep);
+
   return (
-    <div className="flex items-center gap-3 text-xs md:text-sm mb-4">
+    <div className="flex items-center gap-3 text-xs md:text-sm mb-4 select-none">
       {STEPS.map((step, index) => {
-        const isActive = step.id === activeStep;
-        const isCompleted = STEPS.findIndex((s) => s.id === activeStep) > index;
+        const isActive = index === activeIndex;
+        const isCompleted = index < activeIndex;
+
+        const colorClass = isActive
+          ? "bg-slate-900 text-white border-slate-900"
+          : isCompleted
+          ? "bg-emerald-50 text-emerald-700 border-emerald-500"
+          : "bg-white text-slate-500 border-slate-300";
+
+        const textColor = isActive
+          ? "text-slate-900"
+          : isCompleted
+          ? "text-emerald-700"
+          : "text-slate-500";
 
         return (
           <div key={step.id} className="flex items-center gap-2">
             {/* Bullet */}
-            <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center border text-[11px] md:text-xs ${
-                isActive
-                  ? "bg-slate-900 text-white border-slate-900"
-                  : isCompleted
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-500"
-                  : "bg-white text-slate-500 border-slate-300"
-              }`}
+            <button
+              disabled={!onStepChange}
+              onClick={() => onStepChange?.(step.id)}
+              className={`w-6 h-6 rounded-full flex items-center justify-center border text-[11px] md:text-xs transition ${
+                onStepChange ? "cursor-pointer" : "cursor-default"
+              } ${colorClass}`}
             >
               {index + 1}
-            </div>
+            </button>
 
             {/* Label */}
-            <span
-              className={`font-medium ${
-                isActive
-                  ? "text-slate-900"
-                  : isCompleted
-                  ? "text-emerald-700"
-                  : "text-slate-500"
-              }`}
-            >
+            <span className={`font-medium transition ${textColor}`}>
               {step.label}
             </span>
 
