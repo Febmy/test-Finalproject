@@ -6,31 +6,7 @@ import { useToast } from "../../context/ToastContext.jsx";
 import Spinner from "../../components/ui/Spinner.jsx";
 import CheckoutStepper from "../../components/ui/CheckoutStepper.jsx";
 import { formatCurrency } from "../../lib/format.js";
-
-// =====================
-// LocalStorage helpers
-// =====================
-const TX_TOTALS_STORAGE_KEY = "travelapp_transaction_totals";
-
-function loadTransactionTotals() {
-  try {
-    const raw = localStorage.getItem(TX_TOTALS_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object") return parsed;
-    return {};
-  } catch {
-    return {};
-  }
-}
-
-function saveTransactionTotals(map) {
-  try {
-    localStorage.setItem(TX_TOTALS_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
-}
+import { saveTransactionTotals } from "../../lib/transactionTotals"; // <-- import helper
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -68,7 +44,7 @@ export default function Checkout() {
         const [cartRes, pmRes, promoRes] = await Promise.all([
           api.get("/carts"),
           api.get("/payment-methods"),
-          api.get("/promos"), // NEW: Fetch promos from API
+          api.get("/promos"),
         ]);
 
         const allCarts = cartRes.data?.data || [];
@@ -163,13 +139,13 @@ export default function Checkout() {
     }
 
     // Validate minimum claim price
-    const subtotal = carts.reduce((sum, cart) => {
+    const subtotalCalc = carts.reduce((sum, cart) => {
       const price = cart.activity?.price || 0;
       return sum + price * (cart.quantity || 1);
     }, 0);
 
     const minPrice = foundPromo.minimum_claim_price || 0;
-    if (minPrice > 0 && subtotal < minPrice) {
+    if (minPrice > 0 && subtotalCalc < minPrice) {
       showToast({
         type: "error",
         message: `Minimum transaksi ${formatCurrency(
@@ -246,11 +222,13 @@ export default function Checkout() {
       const res = await api.post("/create-transaction", payload);
       const newTx = res.data?.data;
 
-      // Simpan total yang BENAR (totalToPay) ke localStorage
+      // Simpan total transaksi secara terstruktur menggunakan helper
       if (newTx?.id) {
-        const totalsMap = loadTransactionTotals();
-        totalsMap[newTx.id] = totalToPay;
-        saveTransactionTotals(totalsMap);
+        saveTransactionTotals(newTx.id, {
+          subtotal,
+          discount,
+          total: totalToPay,
+        });
       }
 
       showToast({

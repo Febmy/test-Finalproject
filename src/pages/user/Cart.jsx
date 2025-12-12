@@ -1,35 +1,29 @@
 // src/pages/user/Cart.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../lib/api.js";
 import { useToast } from "../../context/ToastContext.jsx";
 import EmptyState from "../../components/ui/EmptyState.jsx";
 import Spinner from "../../components/ui/Spinner.jsx";
 import { formatCurrency } from "../../lib/format.js";
 import CartItem from "../../components/cart/CartItem.jsx";
 import { ShoppingCart, ArrowRight, Trash2 } from "lucide-react";
+import useCart from "../../hooks/userCart.js"; // Gunakan hook yang disesuaikan
 
 export default function Cart() {
-  const [items, setItems] = useState([]);
+  const { items, increase, decrease, removeItem, subtotal, syncWithAPI } =
+    useCart();
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { showToast } = useToast();
 
   useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const fetchCart = async () => {
-    try {
+    const fetchAndSync = async () => {
       setLoading(true);
-      const res = await api.get("/carts");
-      setItems(res.data?.data || []);
-    } catch (err) {
-      showToast({ type: "error", message: "Gagal memuat keranjang." });
-    } finally {
+      await syncWithAPI(); // Sync local dengan API
       setLoading(false);
-    }
-  };
+    };
+    fetchAndSync();
+  }, []);
 
   const handleCheckout = () => {
     if (items.length === 0) {
@@ -42,10 +36,6 @@ export default function Cart() {
   };
 
   const totalQty = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-  const totalPrice = items.reduce(
-    (sum, item) => sum + (item.activity?.price || 0) * (item.quantity || 1),
-    0
-  );
 
   if (loading)
     return (
@@ -97,7 +87,13 @@ export default function Cart() {
               </h2>
               <div className="space-y-4">
                 {items.map((item) => (
-                  <CartItem key={item.id} item={item} />
+                  <CartItem
+                    key={item.id}
+                    item={item}
+                    onIncrease={() => increase(item.id)} // Handler async ke API + local
+                    onDecrease={() => decrease(item.id)}
+                    onRemove={() => removeItem(item.id)}
+                  />
                 ))}
               </div>
             </div>
@@ -113,7 +109,7 @@ export default function Cart() {
                     Total for {totalQty} persons
                   </p>
                   <p className="text-4xl font-bold text-blue-600 mt-4">
-                    {formatCurrency(totalPrice)}
+                    {formatCurrency(subtotal)}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4">

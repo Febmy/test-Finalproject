@@ -7,6 +7,7 @@ import Spinner from "../../components/ui/Spinner.jsx";
 import EmptyState from "../../components/ui/EmptyState.jsx";
 import { formatCurrency, formatDateTime } from "../../lib/format.js";
 import { getFriendlyErrorMessage } from "../../lib/errors.js";
+import { loadTransactionTotalsMap } from "../../lib/transactionTotals"; // <-- import helper
 
 // Status colors and labels
 const STATUS_CONFIG = {
@@ -107,6 +108,9 @@ export default function Transactions() {
     failed: 0,
   });
 
+  // New: local totals map (read from storage)
+  const [totalsMap, setTotalsMap] = useState({});
+
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -121,6 +125,7 @@ export default function Transactions() {
       // Clear state
       navigate(location.pathname, { replace: true, state: {} });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, navigate, showToast]);
 
   const fetchTransactions = async () => {
@@ -167,6 +172,14 @@ export default function Transactions() {
       });
 
       setTransactions(sorted);
+
+      // Load totals map from local storage helper (new)
+      try {
+        const map = loadTransactionTotalsMap();
+        setTotalsMap(map || {});
+      } catch (err) {
+        setTotalsMap({});
+      }
 
       // Calculate stats
       const stats = {
@@ -371,7 +384,15 @@ export default function Transactions() {
             const activity = getFirstActivity(tx);
             const status = tx.status || "pending";
             const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-            const totalAmount = tx.totalAmount || tx.amount || 0;
+
+            // Prefer stored totals map if available, fallback to API fields
+            const totalAmount =
+              (totalsMap &&
+                totalsMap[tx.id] &&
+                Number(totalsMap[tx.id].total)) ||
+              tx.totalAmount ||
+              tx.amount ||
+              0;
 
             return (
               <article
