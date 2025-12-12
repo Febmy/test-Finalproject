@@ -92,10 +92,22 @@ Proyek ini mensimulasikan platform di mana:
 
 ### 2. Clone & Instalasi
 
-```bash
+````bash
 git clone https://github.com/Febmy/test-Finalproject.git
 cd test-Finalproject
 npm install
+
+## 🚀 Deploy ke Netlify
+
+Project ini sudah berhasil di-deploy menggunakan [Netlify](https://www.netlify.com).
+
+🔗 **Live Demo:** [finalproject-dibimbing.netlify.app](https://finalproject-dibimbing.netlify.app/)
+
+### Cara Deploy ke Netlify
+
+1. **Build project lokal**
+   ```bash
+   npm run build
 
 🧱 Struktur Folder
 
@@ -498,4 +510,4 @@ Mode dark theme.
 Dibuat sebagai final project Front End Web Development bootcamp, oleh:
 
 Febmy Shesar Baihaqi (@Febmy)
-```
+````
